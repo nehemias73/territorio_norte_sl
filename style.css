@@ -23,7 +23,7 @@ html, body {
 /* Estilos para las zonas SVG */
 g.zona > * {
   /*fill: #cccccc; /* Color de relleno por defecto para las zonas */
-  /*stroke: #333;
+  stroke: #333;
   stroke-width: 0.5px; /* Un poco más fino */
   cursor: pointer;
   transition: fill 0.3s ease; /* Transición suave para el color de relleno */
@@ -42,7 +42,7 @@ g.zona.seleccionado > * {
   position: absolute;
   bottom: 20px;
   left: 20px;
-  z-index: 1000; /* Z-index muy alto para asegurar visibilidad */
+  z-index: 8000; /* Z-index muy alto para asegurar visibilidad */
   display: flex;
   gap: 10px;
 }
