@@ -1,0 +1,101 @@
+html, body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: sans-serif;
+  overflow: hidden;
+}
+
+#mapa-container {
+  width: 100vw;
+  height: 100vh;
+  position: relative;
+}
+
+#svg-pan-zoom-container {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+#miMapaSVG {
+  width: 100%;
+  height: 100%;
+  display: block;
+  background-color: #f0f0f0;
+}
+
+/* Estilo para el grupo completo cuando está seleccionado */
+g.zona > * {
+  cursor: pointer;
+  transition: fill 0.3s ease; /* Transición suave para el color de relleno */
+}
+
+g.zona:hover > * {
+  fill: #ffcc00; /* Color de relleno al pasar el ratón */
+}
+
+g.zona.seleccionado > * {
+  stroke-width: 1;
+  stroke:red;
+  fill: #FF4500 !important; /* Un naranja-rojizo distintivo para el grupo seleccionado */
+}
+
+#info-box {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: white;
+  border: 2px solid #333;
+  padding: 1em;
+  max-width: 300px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+  z-index: 100;
+  border-radius: 8px;
+}
+
+#cerrar-info {
+  background: #333;
+  color: white;
+  border: none;
+  padding: 0.5em 1em;
+  cursor: pointer;
+  margin-top: 10px;
+  border-radius: 5px;
+}
+
+#info-box.oculto {
+  display: none;
+}
+
+#zoom-controls {
+  position: absolute;
+  bottom: 20px; /* Ajusta la posición vertical */
+  left: 20px; /* Ajusta la posición horizontal */
+  z-index: 101; /* Asegura que estén por encima del mapa */
+  display: flex; /* Para que los botones estén en línea */
+  gap: 10px; /* Espacio entre los botones */
+}
+
+#zoom-controls button {
+  background-color: #333;
+  color: white;
+  border: none;
+  border-radius: 50%; /* Botones redondos */
+  width: 40px;
+  height: 40px;
+  font-size: 1.5em;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  transition: background-color 0.2s ease;
+}
+
+#zoom-controls button:hover {
+  background-color: #555;
+}
