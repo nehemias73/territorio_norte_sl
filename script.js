@@ -8,6 +8,8 @@ document.addEventListener("DOMContentLoaded", () => {
     panEnabled: true,
     mouseWheelZoomEnabled: true,
     zoomScaleSensitivity: 0.2,
+    // ✅ Añadir pinchEnabled para el zoom con pellizco
+    pinchEnabled: true, // Habilita el zoom con pellizco en dispositivos táctiles
     // ✅ Añadir la función beforePan para limitar el movimiento del mapa
     beforePan: function(oldPan, newPan) {
       var sizes = this.getSizes();
@@ -51,6 +53,17 @@ document.addEventListener("DOMContentLoaded", () => {
   const infoContenido = document.getElementById("info-contenido");
   const btnCerrar = document.getElementById("cerrar-info");
 
+  // ✅ Cargar descripciones personalizadas desde localStorage
+  let customDescriptions = {};
+  try {
+    const storedDescriptions = localStorage.getItem('mapDescriptions');
+    if (storedDescriptions) {
+      customDescriptions = JSON.parse(storedDescriptions);
+    }
+  } catch (e) {
+    console.error("Error al cargar descripciones de localStorage:", e);
+  }
+
   // ✅ Manejo de botones de zoom
   const zoomInBtn = document.getElementById("zoom-in");
   const zoomOutBtn = document.getElementById("zoom-out");
@@ -77,7 +90,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // Lógica para mostrar la caja de información
       const territoryId = this.id.replace(/_/g, ' '); // Reemplaza todos los guiones bajos por espacios
-      infoContenido.innerHTML = `<h3>${territoryId}</h3><p>¡Has hecho clic en ${territoryId}!</p>`;
+      
+      // ✅ Usar descripción personalizada si existe, de lo contrario, usar la predeterminada
+      let descriptionToShow = customDescriptions[this.id] || `<h3>${territoryId}</h3><p>¡Has hecho clic en ${territoryId}!</p>`;
+      infoContenido.innerHTML = descriptionToShow;
       infoBox.classList.remove("oculto");
     });
 
@@ -92,7 +108,10 @@ document.addEventListener("DOMContentLoaded", () => {
       zonas.forEach(z => z.classList.remove("seleccionado"));
       this.classList.add("seleccionado");
       const territoryId = this.id.replace(/_/g, ' ');
-      infoContenido.innerHTML = `<h3>${territoryId}</h3><p>¡Has hecho clic en ${territoryId}!</p>`;
+      
+      // ✅ Usar descripción personalizada si existe, de lo contrario, usar la predeterminada
+      let descriptionToShow = customDescriptions[this.id] || `<h3>${territoryId}</h3><p>¡Has hecho clic en ${territoryId}!</p>`;
+      infoContenido.innerHTML = descriptionToShow;
       infoBox.classList.remove("oculto");
     });
   });
