@@ -2,19 +2,20 @@ document.addEventListener("DOMContentLoaded", () => {
   // ✅ Inicializar svg-pan-zoom correctamente
   const panZoom = svgPanZoom("#miMapaSVG", {
     zoomEnabled: true,
-    controlIconsEnabled: false, // Deshabilita los iconos de control predeterminados
+    controlIconsEnabled: false, // Deshabilita los iconos de control predeterminados de svg-pan-zoom
     fit: true,
     center: true,
     panEnabled: true,
     mouseWheelZoomEnabled: true,
     zoomScaleSensitivity: 0.2,
-    // Asegúrate de que los eventos táctiles estén habilitados
-    eventsListenerElement: document.getElementById('mapa-container') // Escucha eventos en el contenedor del mapa
+    // Importante para el zoom táctil:
+    // Asegúrate de que los eventos táctiles estén habilitados y que el elemento de escucha sea el contenedor.
+    eventsListenerElement: document.getElementById('mapa-container') 
   });
 
   // ✅ Manejo de selección de zonas
-  // Corrección: Selecciona elementos con la CLASE "zona" (usa el punto)
-  const zonas = document.querySelectorAll(".zona");
+  // Corrección: Selecciona elementos con la CLASE "zona" (usa el punto antes de zona)
+  const zonas = document.querySelectorAll(".zona"); 
   const infoBox = document.getElementById("info-box");
   const infoContenido = document.getElementById("info-contenido");
   const btnCerrar = document.getElementById("cerrar-info");
@@ -23,7 +24,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const zoomInBtn = document.getElementById("zoom-in");
   const zoomOutBtn = document.getElementById("zoom-out");
 
-  if (zoomInBtn && zoomOutBtn) { // Asegurarse de que los botones existen antes de añadir listeners
+  // Añadir event listeners para los botones de zoom si existen
+  if (zoomInBtn && zoomOutBtn) { 
     zoomInBtn.addEventListener("click", () => {
       panZoom.zoomIn();
     });
@@ -44,7 +46,7 @@ document.addEventListener("DOMContentLoaded", () => {
       // Añadir la clase 'seleccionado' a la zona (el elemento <g>) que fue clicada
       this.classList.add("seleccionado");
 
-      // Lógica para mostrar la caja de información
+      // Lógica para mostrar la caja de información: "Territorio [ID sin guiones]"
       const territoryId = this.id.replace(/_/g, ' '); // Reemplaza todos los guiones bajos por espacios
       infoContenido.innerHTML = `<h3>Territorio ${territoryId}</h3><p>¡Has hecho clic en ${territoryId}!</p>`;
       infoBox.classList.remove("oculto");
@@ -53,13 +55,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
   btnCerrar.addEventListener("click", () => {
     infoBox.classList.add("oculto");
-    zonas.forEach(z => z.classList.remove("seleccionado"));
+    zonas.forEach(z => z.classList.remove("seleccionado")); // Desseleccionar todas las zonas al cerrar la info
   });
 
-  // Opcional: Cerrar la caja de información al hacer clic en cualquier parte del SVG
-  // que no sea una zona seleccionable.
-  document.getElementById("miMapaSVG").addEventListener("click", function() {
-    if (!infoBox.classList.contains("oculto")) {
+  // Opcional: Cerrar la caja de información y deseleccionar la zona al hacer clic fuera de la caja de info y fuera de una zona
+  document.getElementById("miMapaSVG").addEventListener("click", function(event) {
+    // Si el clic no fue dentro de la caja de información y la caja no está oculta
+    if (!infoBox.contains(event.target) && !infoBox.classList.contains("oculto")) {
       infoBox.classList.add("oculto");
       zonas.forEach(z => z.classList.remove("seleccionado"));
     }
