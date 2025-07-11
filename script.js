@@ -7,11 +7,14 @@ document.addEventListener("DOMContentLoaded", () => {
     center: true,
     panEnabled: true,
     mouseWheelZoomEnabled: true,
-    zoomScaleSensitivity: 0.2
+    zoomScaleSensitivity: 0.2,
+    // Asegúrate de que los eventos táctiles estén habilitados
+    eventsListenerElement: document.getElementById('mapa-container') // Escucha eventos en el contenedor del mapa
   });
 
   // ✅ Manejo de selección de zonas
-  const zonas = document.querySelectorAll(".zona"); // Selecciona los <g> con la clase "zona"
+  // Corrección: Selecciona elementos con la CLASE "zona" (usa el punto)
+  const zonas = document.querySelectorAll(".zona");
   const infoBox = document.getElementById("info-box");
   const infoContenido = document.getElementById("info-contenido");
   const btnCerrar = document.getElementById("cerrar-info");
@@ -20,13 +23,15 @@ document.addEventListener("DOMContentLoaded", () => {
   const zoomInBtn = document.getElementById("zoom-in");
   const zoomOutBtn = document.getElementById("zoom-out");
 
-  zoomInBtn.addEventListener("click", () => {
-    panZoom.zoomIn();
-  });
+  if (zoomInBtn && zoomOutBtn) { // Asegurarse de que los botones existen antes de añadir listeners
+    zoomInBtn.addEventListener("click", () => {
+      panZoom.zoomIn();
+    });
 
-  zoomOutBtn.addEventListener("click", () => {
-    panZoom.zoomOut();
-  });
+    zoomOutBtn.addEventListener("click", () => {
+      panZoom.zoomOut();
+    });
+  }
 
   zonas.forEach(zona => {
     zona.addEventListener("click", function(event) {
@@ -40,9 +45,8 @@ document.addEventListener("DOMContentLoaded", () => {
       this.classList.add("seleccionado");
 
       // Lógica para mostrar la caja de información
-      // Lógica para mostrar la caja de información
       const territoryId = this.id.replace(/_/g, ' '); // Reemplaza todos los guiones bajos por espacios
-      infoContenido.innerHTML = `<h3>${territoryId}</h3><p>¡Has hecho clic en ${territoryId}!</p>`;
+      infoContenido.innerHTML = `<h3>Territorio ${territoryId}</h3><p>¡Has hecho clic en ${territoryId}!</p>`;
       infoBox.classList.remove("oculto");
     });
   });
