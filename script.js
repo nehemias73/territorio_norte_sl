@@ -2,7 +2,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // ✅ Inicializar svg-pan-zoom correctamente
   const panZoom = svgPanZoom("#miMapaSVG", {
     zoomEnabled: true,
-    controlIconsEnabled: false, // Deshabilita los iconos de control predeterminados de svg-pan-zoom
+    controlIconsEnabled: true, // Deshabilita los iconos de control predeterminados de svg-pan-zoom
     fit: true,
     center: true,
     panEnabled: true,
