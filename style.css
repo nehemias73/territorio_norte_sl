@@ -1,34 +1,30 @@
 html, body {
   height: 100%;
-}
-
-body {
+  width: 100%; /* Asegurarse de que el body ocupa todo el ancho */
   margin: 0;
+  overflow: hidden; /* Evita scroll no deseado del body */
   font-family: sans-serif;
-  overflow: hidden;
 }
 
 #mapa-container {
-  width: 100vw;
-  height: 100vh;
+  width: 100vw; /* Viewport width */
+  height: 100vh; /* Viewport height */
   position: relative;
-}
-
-#svg-pan-zoom-container {
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
+  overflow: hidden; /* Importante para contener el SVG y los controles */
 }
 
 #miMapaSVG {
   width: 100%;
   height: 100%;
-  display: block;
-  background-color: #f0f0f0;
+  display: block; /* Elimina el espacio extra debajo del SVG */
+  background-color: #f0f0f0; /* Color de fondo del mapa */
 }
 
-/* Estilo para el grupo completo cuando está seleccionado */
+/* Estilos para las zonas SVG */
 g.zona > * {
+  fill: #cccccc; /* Color de relleno por defecto para las zonas */
+  stroke: #333;
+  stroke-width: 0.5px; /* Un poco más fino */
   cursor: pointer;
   transition: fill 0.3s ease; /* Transición suave para el color de relleno */
 }
@@ -38,11 +34,45 @@ g.zona:hover > * {
 }
 
 g.zona.seleccionado > * {
-  stroke-width: 1;
-  stroke:red;
   fill: #FF4500 !important; /* Un naranja-rojizo distintivo para el grupo seleccionado */
 }
 
+/* Estilos para los controles de zoom */
+#zoom-controls {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  z-index: 1000; /* Z-index muy alto para asegurar visibilidad */
+  display: flex;
+  gap: 10px;
+}
+
+#zoom-controls button {
+  background-color: rgba(0, 0, 0, 0.6); /* Fondo semi-transparente */
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 50px; /* Tamaño un poco más grande para el dedo */
+  height: 50px;
+  font-size: 2em; /* Texto más grande */
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.3); /* Sombra más pronunciada */
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+#zoom-controls button:hover {
+  background-color: rgba(0, 0, 0, 0.8);
+}
+
+#zoom-controls button:active {
+  transform: scale(0.95); /* Pequeña animación al pulsar */
+}
+
+/* Estilos para la caja de información */
 #info-box {
   position: absolute;
   top: 20px;
@@ -68,34 +98,4 @@ g.zona.seleccionado > * {
 
 #info-box.oculto {
   display: none;
-}
-
-#zoom-controls {
-  position: absolute;
-  bottom: 20px; /* Ajusta la posición vertical */
-  left: 20px; /* Ajusta la posición horizontal */
-  z-index: 101; /* Asegura que estén por encima del mapa */
-  display: flex; /* Para que los botones estén en línea */
-  gap: 10px; /* Espacio entre los botones */
-}
-
-#zoom-controls button {
-  background-color: #333;
-  color: white;
-  border: none;
-  border-radius: 50%; /* Botones redondos */
-  width: 40px;
-  height: 40px;
-  font-size: 1.5em;
-  font-weight: bold;
-  cursor: pointer;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-  transition: background-color 0.2s ease;
-}
-
-#zoom-controls button:hover {
-  background-color: #555;
 }
