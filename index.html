@@ -2,88 +2,133 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Territorio Norte - San Luis</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Gestión de Manzanas Pro - San Luis</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDWopeo-2DngZZQdziXRC-93YzYlAyIqiY&libraries=geometry"></script>
     <style>
+        /* Ajuste de altura para móviles para evitar el scroll del sistema */
         #map { height: calc(100vh - 64px); width: 100%; }
+        
         #loader {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(255, 255, 255, 0.8); z-index: 1000; justify-content: center; align-items: center;
+            background: rgba(255, 255, 255, 0.9); z-index: 2000; justify-content: center; align-items: center;
+        }
+
+        /* Estilo para el panel en móviles (estilo Bottom Sheet) */
+        @media (max-width: 768px) {
+            #side-panel {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                width: 100%;
+                max-height: 80vh;
+                z-index: 1000;
+                border-radius: 20px 20px 0 0;
+                box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+                transform: translateY(100%);
+                transition: transform 0.3s ease-out;
+            }
+            #side-panel.active {
+                transform: translateY(0);
+            }
+            #map { height: calc(100vh - 64px); }
         }
     </style>
 </head>
-<body class="bg-gray-50 font-sans antialiased">
+<body class="bg-gray-50 font-sans antialiased overflow-hidden">
 
-    <nav class="bg-indigo-700 text-white p-4 flex justify-between items-center shadow-md">
-        <h1 class="text-xl font-bold">Gestión de Manzanas - Territorio Norte San Luis</h1>
-        <div class="text-xs bg-indigo-800 px-3 py-1 rounded-full" id="sync-status">Sincronizando con Sheet...</div>
+    <nav class="bg-indigo-700 text-white h-16 flex justify-between items-center px-4 shadow-md z-50 relative">
+        <h1 class="text-lg font-bold">GeoRegistro Pro</h1>
+        <div class="flex items-center gap-2">
+            <div class="text-[10px] bg-indigo-800 px-2 py-1 rounded-full border border-indigo-400/30" id="sync-status">Sincronizando...</div>
+        </div>
     </nav>
 
-    <div class="flex flex-col md:flex-row">
-        <div class="flex-grow"><div id="map"></div></div>
+    <div class="flex flex-col md:flex-row relative">
+        <div class="flex-grow relative">
+            <div id="map"></div>
+        </div>
 
-        <!-- Panel Lateral -->
-        <div id="side-panel" class="w-full md:w-80 bg-white p-6 border-l border-gray-200 overflow-y-auto" style="max-height: calc(100vh - 64px);">
-            <h2 class="text-lg font-semibold mb-2 text-gray-800" id="polygon-title">Selecciona un elemento</h2>
-            <div id="polygon-info" class="text-sm text-gray-600 mb-6">Haz clic en una manzana o icono para interactuar.</div>
-            
-            <!-- VISTA 1: FORMULARIO DE ASIGNACIÓN (Libre) -->
-            <div id="options-container" class="space-y-3 hidden">
-                <hr class="my-4">
-                <p class="text-sm font-bold text-green-600">Estado: Disponible</p>
-
-                <div id="assigned-fields" class="space-y-3 mt-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Nombre del Publicador:</label>
-                        <input type="text" id="publisher-name" class="w-full p-2 border border-gray-300 rounded-md shadow-sm">
+        <!-- Panel Lateral / Móvil Bottom Sheet -->
+        <div id="side-panel" class="w-full md:w-96 bg-white border-l border-gray-200 overflow-y-auto transition-all duration-300">
+            <div class="p-5">
+                <!-- Botón cerrar (Solo móvil) -->
+                <div class="flex justify-between items-start mb-4">
+                    <h2 class="text-xl font-bold text-gray-800" id="polygon-title">Selecciona una manzana</h2>
+                    <button onclick="closePanel()" class="md:hidden p-2 bg-gray-100 rounded-full">
+                        <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+                
+                <div id="polygon-info" class="text-sm text-gray-500 mb-6 bg-gray-50 p-3 rounded-lg border border-dashed border-gray-300">
+                    Toca una manzana en el mapa para ver los detalles.
+                </div>
+                
+                <!-- VISTA 1: ASIGNACIÓN -->
+                <div id="options-container" class="space-y-4 hidden">
+                    <div class="flex items-center gap-2 text-green-600 font-bold text-sm bg-green-50 p-2 rounded">
+                        <div class="w-2 h-2 rounded-full bg-green-600 animate-pulse"></div>
+                        Estado: Disponible
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Fecha de asignación:</label>
-                        <input type="date" id="assignment-date" class="w-full p-2 border border-gray-300 rounded-md shadow-sm">
+
+                    <div id="assigned-fields" class="space-y-4 mt-4 p-4 bg-indigo-50/50 rounded-xl border border-indigo-100">
+                        <div>
+                            <label class="block text-xs font-bold text-indigo-900 uppercase mb-1">Nombre del Publicador</label>
+                            <input type="text" id="publisher-name" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none text-base" placeholder="¿Quién la toma?">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-indigo-900 uppercase mb-1">Fecha de inicio</label>
+                            <input type="date" id="assignment-date" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none text-base">
+                        </div>
                     </div>
+
+                    <div class="mt-4">
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Notas</label>
+                        <textarea id="comment-area" rows="2" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none text-base" placeholder="Alguna observación..."></textarea>
+                    </div>
+
+                    <button onclick="saveToSheet('Asignado')" class="w-full mt-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl shadow-lg transform active:scale-[0.98] transition-all">
+                        Asignar Manzana
+                    </button>
                 </div>
 
-                <div class="mt-4">
-                    <label class="block text-sm font-medium text-gray-700">Comentarios:</label>
-                    <textarea id="comment-area" rows="3" class="w-full p-2 border border-gray-300 rounded-md shadow-sm"></textarea>
+                <!-- VISTA 2: COMPLETAR -->
+                <div id="completion-container" class="space-y-4 hidden">
+                    <div class="p-5 bg-gray-800 rounded-2xl shadow-xl text-white">
+                        <p class="text-[10px] uppercase tracking-widest text-gray-400 font-bold mb-1">Publicador asignado</p>
+                        <p class="text-xl font-bold mb-3" id="display-publisher">-</p>
+                        <div class="flex items-center gap-2 text-xs text-gray-400 border-t border-gray-700 pt-3">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                            Desde el <span id="display-date" class="text-white font-medium">-</span>
+                        </div>
+                    </div>
+
+                    <div class="mt-4">
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Fecha de completado</label>
+                        <input type="date" id="completion-date" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none text-base">
+                    </div>
+
+                    <button onclick="saveToSheet('Sin asignar')" class="w-full mt-2 bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl shadow-lg transform active:scale-[0.98] transition-all">
+                        Liberar Manzana
+                    </button>
                 </div>
-
-                <button onclick="saveToSheet('Asignado')" class="w-full mt-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-md transition duration-200 shadow-lg active:scale-95">
-                    Asignar ahora
-                </button>
-            </div>
-
-            <!-- VISTA 2: COMPLETAR TRABAJO (Asignada) -->
-            <div id="completion-container" class="space-y-4 hidden">
-                <hr class="my-4">
-                <div class="p-4 bg-gray-100 rounded-lg border border-gray-200 shadow-inner">
-                    <p class="text-xs uppercase tracking-wider text-gray-500 font-bold mb-1">Asignado a:</p>
-                    <p class="text-lg font-bold text-indigo-800" id="display-publisher">-</p>
-                    <p class="text-xs text-gray-500 mt-2">Desde el día: <span id="display-date" class="font-semibold text-gray-700">-</span></p>
-                </div>
-
-                <div class="mt-4">
-                    <label class="block text-sm font-medium text-gray-700">Fecha de completado:</label>
-                    <input type="date" id="completion-date" class="w-full p-2 border border-gray-300 rounded-md border-indigo-300 focus:ring-2 focus:ring-indigo-200">
-                </div>
-
-                <button onclick="saveToSheet('Sin asignar')" class="w-full mt-4 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-md transition duration-200 shadow-lg active:scale-95">
-                    Liberar Manzana
-                </button>
-                <p class="text-center text-xs text-gray-400 italic">Al completar, la manzana volverá a estar disponible.</p>
             </div>
         </div>
     </div>
 
-    <div id="toast" class="fixed bottom-5 right-5 transform translate-y-20 transition-transform duration-300 bg-gray-800 text-white px-6 py-3 rounded-lg shadow-2xl opacity-0 z-50"></div>
-    <div id="loader" class="flex flex-col">
-        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-700"></div>
-        <p class="mt-4 text-indigo-700 font-bold">Procesando datos...</p>
+    <!-- Toast & Loader -->
+    <div id="toast" class="fixed bottom-24 md:bottom-10 left-1/2 -translate-x-1/2 md:left-auto md:right-10 transform transition-all duration-300 px-6 py-4 rounded-full shadow-2xl opacity-0 z-[2000] text-sm font-bold"></div>
+    
+    <div id="loader">
+        <div class="text-center">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-700 mx-auto"></div>
+            <p class="mt-4 text-indigo-700 font-bold text-sm">Actualizando...</p>
+        </div>
     </div>
 
-     <script>
+    <script>
         const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwS9l6WFj-tlwx1QnC_g5seS4yhHimTKKD66bRM8QEUNHgZ4pvVuSMciarZAkO0_FGsRw/exec"; 
         
         // DATOS CON POLÍGONOS E ICONOS (POINTS)
@@ -535,13 +580,18 @@
         let map;
         let selectedFeature = null;
         let statusMarkers = {}; 
-        let nameLabelsMap = {}; // Guardamos los marcadores de nombre indexados por manzana
+        let nameLabelsMap = {}; 
         let globalSheetData = []; 
+        let zoomTimeout;
 
         async function initMap() {
             map = new google.maps.Map(document.getElementById("map"), {
                 zoom: 15, center: { lat: -33.2915, lng: -66.3305 }, 
-                mapTypeId: 'terrain', mapTypeControl: false
+                mapTypeId: 'terrain', 
+                mapTypeControl: false,
+                streetViewControl: false,
+                fullscreenControl: false,
+                gestureHandling: 'greedy' // Mejora scroll en móviles
             });
 
             map.data.setStyle((feature) => {
@@ -562,7 +612,7 @@
 
                 return {
                     fillColor: isAsignado ? '#1a1a1a' : originalFill,
-                    fillOpacity: isAsignado ? 0.7 : 0.35,
+                    fillOpacity: isAsignado ? 0.8 : 0.35,
                     strokeColor: isAsignado ? '#000000' : originalStroke,
                     strokeWeight: 2, zIndex: isAsignado ? 2 : 1
                 };
@@ -574,34 +624,38 @@
             map.data.forEach(f => f.getGeometry().forEachLatLng(p => bounds.extend(p)));
             map.fitBounds(bounds);
 
-            // Carga inicial de asignaciones
             await loadExistingAssignments();
 
-            // Listener de Zoom para ajustar tamaño de texto
+            // OPTIMIZACIÓN: Debounce para el zoom_changed
             map.addListener('zoom_changed', () => {
-                updateLabelSizes();
+                if (zoomTimeout) clearTimeout(zoomTimeout);
+                zoomTimeout = setTimeout(updateLabelSizes, 50); // Solo actualiza tras 50ms de calma
             });
 
             map.data.addListener('click', (event) => handlePolygonClick(event.feature));
         }
 
-        // Ajusta el tamaño de la fuente según el zoom (Más pequeño ahora)
         function updateLabelSizes() {
             const zoom = map.getZoom();
-            // Nueva escala mas pequeña: zoom 15 = 9px, zoom 17 = 12px, zoom 13 = 6px
-            const newSize = Math.max(6, (zoom - 15) * 1.5 + 9) + "px";
+            // Tamaño mínimo 7px, escala suave
+            const newSize = Math.max(7, (zoom - 15) * 1.5 + 8) + "px";
             
-            Object.values(nameLabelsMap).forEach(marker => {
-                const label = marker.getLabel();
-                if (label) {
-                    label.fontSize = newSize;
-                    marker.setLabel(label);
-                }
+            // Usamos requestAnimationFrame para no bloquear el hilo principal
+            requestAnimationFrame(() => {
+                Object.values(nameLabelsMap).forEach(marker => {
+                    const label = marker.getLabel();
+                    if (label && label.fontSize !== newSize) {
+                        label.fontSize = newSize;
+                        marker.setLabel(label);
+                    }
+                });
             });
         }
 
-        // Dibuja o actualiza la posición de las etiquetas de nombre
         function refreshNameLabels() {
+            const zoom = map.getZoom();
+            const fontSize = Math.max(7, (zoom - 15) * 1.5 + 8) + "px";
+
             map.data.forEach(feature => {
                 if (feature.getGeometry().getType() === 'Polygon') {
                     const name = feature.getProperty('name');
@@ -611,22 +665,17 @@
                     const isAsignado = status === 'Asignado';
                     let center = getPolygonCenter(feature);
                     
-                    // Si está asignado, subimos el nombre un poco mas para que quede arriba de la X
                     if (isAsignado) {
                         center = { lat: center.lat() + 0.00018, lng: center.lng() };
                     }
 
-                    const zoom = map.getZoom();
-                    const fontSize = Math.max(6, (zoom - 15) * 1.5 + 9) + "px";
-                    
-                    // Ajuste de color: Blanco si está asignado (fondo oscuro), gris suave si no
-                    const textColor = isAsignado ? "white" : "#666666";
+                    const textColor = isAsignado ? "white" : "#444444";
 
                     if (nameLabelsMap[name]) {
                         nameLabelsMap[name].setPosition(center);
                         const label = nameLabelsMap[name].getLabel();
                         label.fontSize = fontSize;
-                        label.color = textColor; // Actualizar color dinámicamente
+                        label.color = textColor;
                         nameLabelsMap[name].setLabel(label);
                     } else {
                         const labelMarker = new google.maps.Marker({
@@ -669,11 +718,12 @@
                     });
                 });
                 
-                // Refrescamos etiquetas después de cargar estados
                 refreshNameLabels();
                 document.getElementById("sync-status").innerText = "Sincronizado";
+                document.getElementById("sync-status").className = "text-[10px] bg-green-600 px-2 py-1 rounded-full text-white";
             } catch (e) { 
-                document.getElementById("sync-status").innerText = "Offline";
+                document.getElementById("sync-status").innerText = "Sin conexión";
+                document.getElementById("sync-status").className = "text-[10px] bg-red-600 px-2 py-1 rounded-full text-white";
             }
         }
 
@@ -690,36 +740,43 @@
                 position: center, map: map,
                 label: { text: "X", color: "#FFFFFF", fontSize: "14px", fontWeight: "bold" },
                 icon: { path: google.maps.SymbolPath.CIRCLE, scale: 10, fillColor: "#000000", fillOpacity: 1, strokeWeight: 2, strokeColor: "white" },
-                zIndex: 6 // Por encima del nombre
+                zIndex: 6
             });
             statusMarkers[name] = marker;
         }
 
         function handlePolygonClick(feature) {
             selectedFeature = feature;
-            const name = feature.getProperty('name') || "Sin nombre";
+            const name = feature.getProperty('name') || "N/A";
             const status = feature.getProperty('status') || "Sin asignar";
-            const geomType = feature.getGeometry().getType();
-
-            document.getElementById("polygon-title").innerText = (geomType === 'Point' ? "Punto: " : "Manzana: ") + name;
+            
+            // UI Toggle
+            const panel = document.getElementById("side-panel");
+            panel.classList.add("active");
+            
+            document.getElementById("polygon-title").innerText = "Manzana " + name;
             
             if (status === "Asignado") {
                 const assignment = globalSheetData.find(item => item.manzana.toString().trim() === name.toString().trim());
-                
-                document.getElementById("polygon-info").innerText = "Esta manzana está asignada.";
-                document.getElementById("display-publisher").innerText = assignment ? assignment.publicador : "No disponible";
-                document.getElementById("display-date").innerText = assignment ? assignment.fecha_asignacion : "Desconocida";
+                document.getElementById("polygon-info").innerText = "Información de la manzana ocupada.";
+                document.getElementById("display-publisher").innerText = assignment ? assignment.publicador : "N/A";
+                document.getElementById("display-date").innerText = assignment ? assignment.fecha_asignacion : "N/A";
                 
                 document.getElementById("options-container").classList.add("hidden");
                 document.getElementById("completion-container").classList.remove("hidden");
                 document.getElementById("completion-date").valueAsDate = new Date();
             } else {
-                document.getElementById("polygon-info").innerText = "Manzana libre para asignar.";
+                document.getElementById("polygon-info").innerText = "Esta manzana está libre para trabajar.";
                 document.getElementById("options-container").classList.remove("hidden");
                 document.getElementById("completion-container").classList.add("hidden");
                 document.getElementById("publisher-name").value = "";
                 document.getElementById("assignment-date").valueAsDate = new Date();
             }
+        }
+
+        function closePanel() {
+            document.getElementById("side-panel").classList.remove("active");
+            selectedFeature = null;
         }
 
         async function saveToSheet(targetAction) {
@@ -733,7 +790,7 @@
             const completeDate = document.getElementById("completion-date").value;
 
             if (targetAction === 'Asignado' && !publisher) {
-                showToast("Por favor, ingresa un nombre", true);
+                showToast("Ingresa un nombre", true);
                 return;
             }
 
@@ -750,26 +807,19 @@
 
             try {
                 await fetch(APPS_SCRIPT_URL, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain" }, body: JSON.stringify(payload) });
-                showToast(targetAction === 'Asignado' ? "Manzana asignada" : "Manzana liberada");
+                showToast(targetAction === 'Asignado' ? "¡Asignado!" : "¡Completado!");
                 await loadExistingAssignments();
-                resetPanel();
+                closePanel();
             } catch (error) { showToast("Error de conexión", true); }
             finally { loader.style.display = "none"; }
-        }
-
-        function resetPanel() {
-            document.getElementById("options-container").classList.add("hidden");
-            document.getElementById("completion-container").classList.add("hidden");
-            document.getElementById("polygon-title").innerText = "Selecciona un elemento";
-            selectedFeature = null;
         }
 
         function showToast(msg, isError = false) {
             const t = document.getElementById("toast");
             t.innerText = msg;
-            t.className = `fixed bottom-5 right-5 transform transition-all duration-300 px-6 py-3 rounded-lg shadow-2xl z-50 ${isError ? "bg-red-600" : "bg-green-600"} text-white`;
+            t.className = `fixed bottom-24 md:bottom-10 left-1/2 -translate-x-1/2 md:left-auto md:right-10 transform transition-all duration-300 px-6 py-4 rounded-full shadow-2xl z-[2000] text-sm font-bold ${isError ? "bg-red-600" : "bg-green-600"} text-white`;
             t.classList.remove("translate-y-20", "opacity-0");
-            setTimeout(() => t.classList.add("translate-y-20", "opacity-0"), 4000);
+            setTimeout(() => t.classList.add("translate-y-20", "opacity-0"), 3000);
         }
 
         window.onload = initMap;
