@@ -46,7 +46,7 @@
 
     <nav class="bg-indigo-700 text-white h-16 flex justify-between items-center px-4 shadow-md z-50 relative">
         <div class="flex items-center gap-3">
-            <h1 class="text-lg font-bold">Territorio Norte - SL</h1>
+            <h1 class="text-lg font-bold">Territorio NORTE, SL</h1>
             <div class="text-[10px] bg-indigo-800 px-3 py-1 rounded-full border border-indigo-400/30 font-medium" id="sync-status">Sincronizando...</div>
         </div>
         
@@ -628,7 +628,7 @@
         let statusMarkers = {}; 
         let nameLabelsMap = {}; 
         let globalSheetData = []; 
-        let labelVisibilityThreshold = 20; //zoom del mapa
+        let labelVisibilityThreshold = 19;
 
         async function initMap() {
             map = new google.maps.Map(document.getElementById("map"), {
@@ -682,6 +682,23 @@
             Object.values(nameLabelsMap).forEach(marker => {
                 if (marker.getVisible() !== visible) marker.setVisible(visible);
             });
+        }
+
+        // Función robusta para formatear cualquier fecha a dd/mm/aaaa sin hora
+        function formatDateDisplay(dateStr) {
+            if (!dateStr || dateStr === "-") return "-";
+            
+            // Intentar parsear como objeto fecha
+            const d = new Date(dateStr);
+            if (!isNaN(d.getTime())) {
+                // Usamos UTC para evitar que el desfase horario cambie el día
+                const day = String(d.getUTCDate()).padStart(2, '0');
+                const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+                const year = d.getUTCFullYear();
+                return `${day}/${month}/${year}`;
+            }
+
+            return dateStr;
         }
 
         function refreshNameLabels() {
@@ -755,7 +772,7 @@
                 
                 refreshNameLabels();
                 updateSyncStatus("Sincronizado", "bg-emerald-500");
-                renderAssignedList(); // Renderizar lista al cargar
+                renderAssignedList(); 
             } catch (e) { 
                 updateSyncStatus("Offline", "bg-rose-500");
             }
@@ -809,7 +826,7 @@
                 document.getElementById("completion-container").classList.remove("hidden");
                 
                 document.getElementById("display-publisher").innerText = assignment ? assignment.publicador : "N/A";
-                document.getElementById("display-date").innerText = assignment ? assignment.fecha_asignacion : "N/A";
+                document.getElementById("display-date").innerText = assignment ? formatDateDisplay(assignment.fecha_asignacion) : "N/A";
                 document.getElementById("completion-date").valueAsDate = new Date();
             } else {
                 document.getElementById("options-container").classList.remove("hidden");
@@ -848,7 +865,6 @@
                 return isAssigned && matchesSearch;
             });
 
-            // Ordenar datos
             filtered.sort((a, b) => {
                 switch (sortBy) {
                     case "name_asc":
@@ -878,7 +894,7 @@
                             </div>
                             <div class="text-right shrink-0">
                                 <p class="text-[9px] uppercase font-bold text-gray-400 mb-1">Asignada</p>
-                                <p class="text-[11px] font-semibold text-gray-600 bg-white px-2 py-1 rounded-md border border-gray-100">${item.fecha_asignacion || "-"}</p>
+                                <p class="text-[11px] font-semibold text-gray-600 bg-white px-2 py-1 rounded-md border border-gray-100">${formatDateDisplay(item.fecha_asignacion)}</p>
                             </div>
                         </div>
                     `;
@@ -905,12 +921,14 @@
         }
 
         function closePanel() {
-            // En móvil se oculta el panel. En desktop se mantiene pero vuelve al listado.
+            const panel = document.getElementById("side-panel");
             if (window.innerWidth <= 768) {
-                document.getElementById("side-panel").classList.remove("active");
+                panel.classList.remove("active");
+                selectedFeature = null;
+            } else {
+                selectedFeature = null;
+                showAssignedList();
             }
-            selectedFeature = null;
-            showAssignedList();
         }
 
         async function saveToSheet(targetAction) {
@@ -936,7 +954,7 @@
                 fecha_asignacion: targetAction === 'Asignado' ? assignDate : "",
                 comentario: targetAction === 'Asignado' ? "" : "Finalizado el " + completeDate,
                 coordenadas: `${pos.lat()}, ${pos.lng()}`,
-                fecha_registro: new Date().toLocaleString()
+                fecha_registro: new Date().toISOString().split('T')[0] 
             };
 
             try {
