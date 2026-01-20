@@ -590,7 +590,7 @@
         let statusMarkers = {}; 
         let nameLabelsMap = {}; 
         let globalSheetData = []; 
-        let labelVisibilityThreshold = 14; // Zoom mínimo para ver nombres
+        let labelVisibilityThreshold = 18; // Solo visibles en zoom extremo para fluidez máxima
 
         async function initMap() {
             map = new google.maps.Map(document.getElementById("map"), {
@@ -634,13 +634,12 @@
 
             await loadExistingAssignments();
 
-            // Optimización de visibilidad por zoom (Toggles instantáneos sin recálculo)
+            // Optimización de visibilidad instantánea
             map.addListener('zoom_changed', toggleLabelsVisibility);
 
             map.data.addListener('click', (event) => handlePolygonClick(event.feature));
         }
 
-        // Función de alto rendimiento para ocultar/mostrar etiquetas
         function toggleLabelsVisibility() {
             const zoom = map.getZoom();
             const visible = zoom >= labelVisibilityThreshold;
@@ -653,7 +652,6 @@
         function refreshNameLabels() {
             const zoom = map.getZoom();
             const visible = zoom >= labelVisibilityThreshold;
-            // Tamaño fijo para evitar lag de redimensionamiento
             const fontSize = "10px"; 
 
             map.data.forEach(feature => {
@@ -691,7 +689,7 @@
                             zIndex: 5,
                             visible: visible,
                             clickable: false,
-                            optimized: true // Crucial para rendimiento
+                            optimized: true
                         });
                         nameLabelsMap[name] = labelMarker;
                     }
@@ -743,12 +741,19 @@
             const name = feature.getProperty('name');
             const center = getPolygonCenter(feature);
             const marker = new google.maps.Marker({
-                position: center, map: map,
+                position: center, 
+                map: map,
                 label: { text: "X", color: "#FFFFFF", fontSize: "14px", fontWeight: "900" },
                 icon: { path: google.maps.SymbolPath.CIRCLE, scale: 12, fillColor: "#000000", fillOpacity: 1, strokeWeight: 2, strokeColor: "white" },
-                zIndex: 6,
+                zIndex: 10, // Asegurar que esté por encima de todo
                 optimized: true
             });
+            
+            // HACE QUE LA X SEA CLICKEABLE
+            marker.addListener('click', () => {
+                handlePolygonClick(feature);
+            });
+            
             statusMarkers[name] = marker;
         }
 
