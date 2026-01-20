@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestión de Mapas Pro - San Luis</title>
+    <title>Territorio Norte - San Luis</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- API Key proporcionada -->
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDWopeo-2DngZZQdziXRC-93YzYlAyIqiY&libraries=geometry"></script>
     <style>
         #map { height: calc(100vh - 64px); width: 100%; }
@@ -18,7 +17,7 @@
 <body class="bg-gray-50 font-sans antialiased">
 
     <nav class="bg-indigo-700 text-white p-4 flex justify-between items-center shadow-md">
-        <h1 class="text-xl font-bold">GeoRegistro Pro</h1>
+        <h1 class="text-xl font-bold">Gestión de Manzanas - Territorio Norte San Luis</h1>
         <div class="text-xs bg-indigo-800 px-3 py-1 rounded-full" id="sync-status">Sincronizando con Sheet...</div>
     </nav>
 
@@ -27,55 +26,72 @@
 
         <!-- Panel Lateral -->
         <div id="side-panel" class="w-full md:w-80 bg-white p-6 border-l border-gray-200 overflow-y-auto" style="max-height: calc(100vh - 64px);">
-            <h2 class="text-lg font-semibold mb-2 text-gray-800" id="polygon-title">Selecciona un polígono</h2>
-            <div id="polygon-info" class="text-sm text-gray-600 mb-6">Haz clic en una zona para asignar.</div>
+            <h2 class="text-lg font-semibold mb-2 text-gray-800" id="polygon-title">Selecciona un elemento</h2>
+            <div id="polygon-info" class="text-sm text-gray-600 mb-6">Haz clic en una manzana o icono para interactuar.</div>
             
+            <!-- VISTA 1: FORMULARIO DE ASIGNACIÓN (Libre) -->
             <div id="options-container" class="space-y-3 hidden">
                 <hr class="my-4">
-                <label class="block text-sm font-medium text-gray-700">Estado de la zona:</label>
-                <select id="action-select" onchange="toggleAssignmentFields()" class="w-full p-2 border border-gray-300 rounded-md">
-                    <option value="Sin asignar">Sin asignar (Libre)</option>
-                    <option value="Asignado">Asignado (Ocupado)</option>
-                </select>
+                <p class="text-sm font-bold text-green-600">Estado: Disponible</p>
 
-                <div id="assigned-fields" class="hidden space-y-3 mt-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                <div id="assigned-fields" class="space-y-3 mt-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Nombre del Publicador:</label>
-                        <input type="text" id="publisher-name" class="w-full p-2 border border-gray-300 rounded-md">
+                        <input type="text" id="publisher-name" class="w-full p-2 border border-gray-300 rounded-md shadow-sm">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Fecha de asignación:</label>
-                        <input type="date" id="assignment-date" class="w-full p-2 border border-gray-300 rounded-md">
+                        <input type="date" id="assignment-date" class="w-full p-2 border border-gray-300 rounded-md shadow-sm">
                     </div>
                 </div>
 
                 <div class="mt-4">
                     <label class="block text-sm font-medium text-gray-700">Comentarios:</label>
-                    <textarea id="comment-area" rows="3" class="w-full p-2 border border-gray-300 rounded-md"></textarea>
+                    <textarea id="comment-area" rows="3" class="w-full p-2 border border-gray-300 rounded-md shadow-sm"></textarea>
                 </div>
 
-                <button onclick="saveToSheet()" class="w-full mt-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-md transition duration-200 shadow-lg">
-                    Guardar en Google Sheets
+                <button onclick="saveToSheet('Asignado')" class="w-full mt-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-md transition duration-200 shadow-lg active:scale-95">
+                    Asignar ahora
                 </button>
+            </div>
+
+            <!-- VISTA 2: COMPLETAR TRABAJO (Asignada) -->
+            <div id="completion-container" class="space-y-4 hidden">
+                <hr class="my-4">
+                <div class="p-4 bg-gray-100 rounded-lg border border-gray-200 shadow-inner">
+                    <p class="text-xs uppercase tracking-wider text-gray-500 font-bold mb-1">Asignado a:</p>
+                    <p class="text-lg font-bold text-indigo-800" id="display-publisher">-</p>
+                    <p class="text-xs text-gray-500 mt-2">Desde el día: <span id="display-date" class="font-semibold text-gray-700">-</span></p>
+                </div>
+
+                <div class="mt-4">
+                    <label class="block text-sm font-medium text-gray-700">Fecha de completado:</label>
+                    <input type="date" id="completion-date" class="w-full p-2 border border-gray-300 rounded-md border-indigo-300 focus:ring-2 focus:ring-indigo-200">
+                </div>
+
+                <button onclick="saveToSheet('Sin asignar')" class="w-full mt-4 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-md transition duration-200 shadow-lg active:scale-95">
+                    Liberar Manzana
+                </button>
+                <p class="text-center text-xs text-gray-400 italic">Al completar, la manzana volverá a estar disponible.</p>
             </div>
         </div>
     </div>
 
-    <!-- Feedback UI -->
     <div id="toast" class="fixed bottom-5 right-5 transform translate-y-20 transition-transform duration-300 bg-gray-800 text-white px-6 py-3 rounded-lg shadow-2xl opacity-0 z-50"></div>
     <div id="loader" class="flex flex-col">
         <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-700"></div>
-        <p class="mt-4 text-indigo-700 font-bold">Actualizando...</p>
+        <p class="mt-4 text-indigo-700 font-bold">Procesando datos...</p>
     </div>
 
-    <script>
+     <script>
         const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwS9l6WFj-tlwx1QnC_g5seS4yhHimTKKD66bRM8QEUNHgZ4pvVuSMciarZAkO0_FGsRw/exec"; 
         
-        // CONTENIDO DE TU JSON EMBEBIDO
-        // Se agregaron las propiedades "fill" y "stroke" para que el mapa use los colores originales
+        // DATOS CON POLÍGONOS E ICONOS (POINTS)
+        // Se actualizó la propiedad a "icon" para coincidir con tu JSON
         const GEOJSON_DATA = {
             "type": "FeatureCollection", 
             "features": [
+                // POLÍGONOS (Zonas)
                 {"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[-66.330541,-33.291575],[-66.330434,-33.292403],[-66.329031,-33.292268],[-66.32918,-33.291462],[-66.330541,-33.291575]]]},"properties":{"name":"1-a","description":"Descripción: 1","styleUrl":"#poly-E051CE-1000-64","fill-opacity":0.25098039215686274,"fill":"#e051ce","stroke-opacity":1,"stroke":"#e051ce","stroke-width":1}},
                 {"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[-66.331311,-33.291633],[-66.331185,-33.292469],[-66.330499,-33.292406],[-66.330604,-33.291578],[-66.331311,-33.291633]]]},"properties":{"name":"1-b","description":"Descripción: 1","styleUrl":"#poly-E051CE-1000-64","fill-opacity":0.25098039215686274,"fill":"#e051ce","stroke-opacity":1,"stroke":"#e051ce","stroke-width":1}},
                 {"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[-66.331376,-33.291636],[-66.332085,-33.291694],[-66.331973,-33.292538],[-66.33124,-33.29247],[-66.331376,-33.291636]]]},"properties":{"name":"1-c","description":"Descripción: 1","styleUrl":"#poly-E051CE-1000-64","fill-opacity":0.25098039215686274,"fill":"#e051ce","stroke-opacity":1,"stroke":"#e051ce","stroke-width":1}},
@@ -432,38 +448,123 @@
                 {"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[-66.344637,-33.285132],[-66.345104,-33.285352],[-66.345368,-33.285514],[-66.345643,-33.285701],[-66.345701,-33.285799],[-66.345175,-33.285763],[-66.344557,-33.285686],[-66.344637,-33.285132]]]},"properties":{"name":"76-e","description":"Descripción: 76","styleUrl":"#poly-87E051-1000-64","fill-opacity":0.25098039215686274,"fill":"#87e051","stroke-opacity":1,"stroke":"#87e051","stroke-width":1}},
                 {"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[-66.342871,-33.286501],[-66.344336,-33.28668],[-66.344204,-33.287534],[-66.344041,-33.288557],[-66.342579,-33.288442],[-66.34266,-33.287783],[-66.342702,-33.287393],[-66.342871,-33.286501]]]},"properties":{"name":"77-a","description":"Descripción: 77","styleUrl":"#poly-515DE0-1000-64","fill-opacity":0.25098039215686274,"fill":"#515de0","stroke-opacity":1,"stroke":"#515de0","stroke-width":1}},
                 {"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[-66.34447,-33.285747],[-66.344347,-33.286616],[-66.342872,-33.286451],[-66.342995,-33.28561],[-66.34447,-33.285747]]]},"properties":{"name":"77-b","description":"Descripción: 77","styleUrl":"#poly-515DE0-1000-64","fill-opacity":0.25098039215686274,"fill":"#515de0","stroke-opacity":1,"stroke":"#515de0","stroke-width":1}},
-                {"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[-66.344575,-33.285099],[-66.344483,-33.285671],[-66.343016,-33.285541],[-66.343137,-33.285154],[-66.343306,-33.284757],[-66.343359,-33.284694],[-66.343582,-33.28474],[-66.344118,-33.28492],[-66.344575,-33.285099]]]},"properties":{"name":"77-c","description":"Descripción: 77","styleUrl":"#poly-515DE0-1000-64","fill-opacity":0.25098039215686274,"fill":"#515de0","stroke-opacity":1,"stroke":"#515de0","stroke-width":1}}
-                // Asegúrate de que todos tus polígonos tengan las propiedades "fill" y "stroke" en el JSON completo.
-            ]
+                {"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[-66.344575,-33.285099],[-66.344483,-33.285671],[-66.343016,-33.285541],[-66.343137,-33.285154],[-66.343306,-33.284757],[-66.343359,-33.284694],[-66.343582,-33.28474],[-66.344118,-33.28492],[-66.344575,-33.285099]]]},"properties":{"name":"77-c","description":"Descripción: 77","styleUrl":"#poly-515DE0-1000-64","fill-opacity":0.25098039215686274,"fill":"#515de0","stroke-opacity":1,"stroke":"#515de0","stroke-width":1}},
+                                
+                // Ejemplo con tu formato de JSON
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.330831,-33.2912275,0]},"properties":{"name":"1","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-1","icon-scale":1.1,"icon":"images/icon-1.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3341439,-33.2918254,0]},"properties":{"name":"2","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-2","icon-scale":1.1,"icon":"images/icon-2.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3396156,-33.2916191,0]},"properties":{"name":"3","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-3","icon-scale":1.1,"icon":"images/icon-3.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3407851,-33.2895385,0]},"properties":{"name":"4","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-4","icon-scale":1.1,"icon":"images/icon-4.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.338296,-33.2892156,0]},"properties":{"name":"5","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-5","icon-scale":1.1,"icon":"images/icon-5.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3334036,-33.2897896,0]},"properties":{"name":"6","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-6","icon-scale":1.1,"icon":"images/icon-6.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3314295,-33.2883546,0]},"properties":{"name":"7","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-7","icon-scale":1.1,"icon":"images/icon-7.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3361073,-33.2887134,0]},"properties":{"name":"8","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-8","icon-scale":1.1,"icon":"images/icon-8.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3313437,-33.2861484,0]},"properties":{"name":"9","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-9","icon-scale":1.1,"icon":"images/icon-9.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3339401,-33.2860766,0]},"properties":{"name":"10","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-10","icon-scale":1.1,"icon":"images/icon-10.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3388149,-33.2859153,0]},"properties":{"name":"11","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-11","icon-scale":1.1,"icon":"images/icon-11.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3413255,-33.2861305,0]},"properties":{"name":"12","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-12","icon-scale":1.1,"icon":"images/icon-12.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3389722,-33.2840259,0]},"properties":{"name":"13","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-13","icon-scale":1.1,"icon":"images/icon-13.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3422982,-33.2826626,0]},"properties":{"name":"14","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-14","icon-scale":1.1,"icon":"images/icon-14.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.339101,-33.2822859,0]},"properties":{"name":"15","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-15","icon-scale":1.1,"icon":"images/icon-15.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3362042,-33.2837569,0]},"properties":{"name":"16","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-16","icon-scale":1.1,"icon":"images/icon-16.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.332461,-33.2837469,0]},"properties":{"name":"17","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-17","icon-scale":1.1,"icon":"images/icon-17.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.332697,-33.2820966,0]},"properties":{"name":"18","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-18","icon-scale":1.1,"icon":"images/icon-18.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3328472,-33.2807513,0]},"properties":{"name":"19","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-19","icon-scale":1.1,"icon":"images/icon-19.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.336259,-33.2815764,0]},"properties":{"name":"20","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-20","icon-scale":1.1,"icon":"images/icon-20.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.333963,-33.2792624,0]},"properties":{"name":"21","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-21","icon-scale":1.1,"icon":"images/icon-21.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3408459,-33.2805154,0]},"properties":{"name":"22","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-22","icon-scale":1.1,"icon":"images/icon-22.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3390435,-33.2786139,0]},"properties":{"name":"23","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-23","icon-scale":1.1,"icon":"images/icon-23.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3411463,-33.2786498,0]},"properties":{"name":"24","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-24","icon-scale":1.1,"icon":"images/icon-24.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3430775,-33.2780399,0]},"properties":{"name":"25","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-25","icon-scale":1.1,"icon":"images/icon-25.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3412751,-33.2767842,0]},"properties":{"name":"26","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-26","icon-scale":1.1,"icon":"images/icon-26.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3429059,-33.2755643,0]},"properties":{"name":"27","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-27","icon-scale":1.1,"icon":"images/icon-27.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3401378,-33.2754566,0]},"properties":{"name":"28","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-28","icon-scale":1.1,"icon":"images/icon-28.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3411892,-33.2734833,0]},"properties":{"name":"29","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-29","icon-scale":1.1,"icon":"images/icon-29.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3429059,-33.2734474,0]},"properties":{"name":"30","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-30","icon-scale":1.1,"icon":"images/icon-30.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3374247,-33.2727204,0]},"properties":{"name":"31","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-31","icon-scale":1.1,"icon":"images/icon-31.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3330687,-33.2724693,0]},"properties":{"name":"32","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-32","icon-scale":1.1,"icon":"images/icon-32.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3355793,-33.2715902,0]},"properties":{"name":"33","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-33","icon-scale":1.1,"icon":"images/icon-33.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3340343,-33.2705676,0]},"properties":{"name":"34","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-34","icon-scale":1.1,"icon":"images/icon-34.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3375963,-33.2706394,0]},"properties":{"name":"35","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-35","icon-scale":1.1,"icon":"images/icon-35.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3406648,-33.2715723,0]},"properties":{"name":"36","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-36","icon-scale":1.1,"icon":"images/icon-36.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3428534,-33.2714646,0]},"properties":{"name":"37","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-37","icon-scale":1.1,"icon":"images/icon-37.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3411583,-33.2704958,0]},"properties":{"name":"38","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-38","icon-scale":1.1,"icon":"images/icon-38.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3381597,-33.2680569,0]},"properties":{"name":"39","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-39","icon-scale":1.1,"icon":"images/icon-39.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3357993,-33.2673572,0]},"properties":{"name":"40","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-40","icon-scale":1.1,"icon":"images/icon-40.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.334941,-33.2685054,0]},"properties":{"name":"41","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-41","icon-scale":1.1,"icon":"images/icon-41.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3332244,-33.2677698,0]},"properties":{"name":"42","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-42","icon-scale":1.1,"icon":"images/icon-42.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3340827,-33.266191,0]},"properties":{"name":"43","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-43","icon-scale":1.1,"icon":"images/icon-43.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3376447,-33.2663883,0]},"properties":{"name":"44","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-44","icon-scale":1.1,"icon":"images/icon-44.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.335602,-33.2651512,0]},"properties":{"name":"45","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-45","icon-scale":1.1,"icon":"images/icon-45.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.337941,-33.2649359,0]},"properties":{"name":"46","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-46","icon-scale":1.1,"icon":"images/icon-46.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3525751,-33.2620831,0]},"properties":{"name":"47","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-47","icon-scale":1.1,"icon":"images/icon-47.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3499572,-33.2644155,0]},"properties":{"name":"48","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-48","icon-scale":1.1,"icon":"images/icon-48.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3474037,-33.2640747,0]},"properties":{"name":"49","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-49","icon-scale":1.1,"icon":"images/icon-49.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3453438,-33.2640567,0]},"properties":{"name":"50","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-50","icon-scale":1.1,"icon":"images/icon-50.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3451936,-33.2666223,0]},"properties":{"name":"51","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-51","icon-scale":1.1,"icon":"images/icon-51.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3475969,-33.2669632,0]},"properties":{"name":"52","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-52","icon-scale":1.1,"icon":"images/icon-52.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3499102,-33.2666947,0]},"properties":{"name":"53","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-53","icon-scale":1.1,"icon":"images/icon-53.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3475284,-33.2692064,0]},"properties":{"name":"54","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-54","icon-scale":1.1,"icon":"images/icon-54.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3451466,-33.2692782,0]},"properties":{"name":"55","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-55","icon-scale":1.1,"icon":"images/icon-55.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.34756,-33.2716319,0]},"properties":{"name":"56","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-56","icon-scale":1.1,"icon":"images/icon-56.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.345264,-33.2718293,0]},"properties":{"name":"57","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-57","icon-scale":1.1,"icon":"images/icon-57.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3461008,-33.2816062,0]},"properties":{"name":"58","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-58","icon-scale":1.1,"icon":"images/icon-58.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3474312,-33.2832206,0]},"properties":{"name":"59","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-59","icon-scale":1.1,"icon":"images/icon-59.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3459936,-33.2843687,0]},"properties":{"name":"60","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-60","icon-scale":1.1,"icon":"images/icon-60.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3444915,-33.2837229,0]},"properties":{"name":"61","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-61","icon-scale":1.1,"icon":"images/icon-61.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3474098,-33.2856781,0]},"properties":{"name":"62","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-62","icon-scale":1.1,"icon":"images/icon-62.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3495127,-33.2844224,0]},"properties":{"name":"63","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-63","icon-scale":1.1,"icon":"images/icon-63.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3503816,-33.2829964,0]},"properties":{"name":"64","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-64","icon-scale":1.1,"icon":"images/icon-64.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3539758,-33.2840458,0]},"properties":{"name":"65","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-65","icon-scale":1.1,"icon":"images/icon-65.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3530317,-33.2851041,0]},"properties":{"name":"66","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-66","icon-scale":1.1,"icon":"images/icon-66.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3498881,-33.2858126,0]},"properties":{"name":"67","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-67","icon-scale":1.1,"icon":"images/icon-67.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3486972,-33.2870593,0]},"properties":{"name":"68","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-68","icon-scale":1.1,"icon":"images/icon-68.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3509074,-33.2871849,0]},"properties":{"name":"69","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-69","icon-scale":1.1,"icon":"images/icon-69.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3505212,-33.2883687,0]},"properties":{"name":"70","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-70","icon-scale":1.1,"icon":"images/icon-70.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3528171,-33.2874539,0]},"properties":{"name":"71","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-71","icon-scale":1.1,"icon":"images/icon-71.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3548985,-33.2864852,0]},"properties":{"name":"72","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-72","icon-scale":1.1,"icon":"images/icon-72.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3544908,-33.2884045,0]},"properties":{"name":"73","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-73","icon-scale":1.1,"icon":"images/icon-73.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3478174,-33.2883149,0]},"properties":{"name":"74","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-74","icon-scale":1.1,"icon":"images/icon-74.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3463583,-33.2875974,0]},"properties":{"name":"75","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-75","icon-scale":1.1,"icon":"images/icon-75.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3448807,-33.2873355,0]},"properties":{"name":"76","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-76","icon-scale":1.1,"icon":"images/icon-76.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3435718,-33.28721,0]},"properties":{"name":"77","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-77","icon-scale":1.1,"icon":"images/icon-77.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3657292,-33.2545913,0]},"properties":{"name":"78","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-78","icon-scale":1.1,"icon":"images/icon-78.png","Descripción":"","nombre":""}},
+                {"type":"Feature","geometry":{"type":"Point","coordinates":[-66.3830617,-33.2588035,0]},"properties":{"name":"79","description":{"@type":"html","value":"Descripción: <br>nombre: "},"styleUrl":"#icon-ci-79","icon-scale":1.1,"icon":"images/icon-79.png","Descripción":"","nombre":""}},            ]
         };
 
         let map;
         let selectedFeature = null;
         let statusMarkers = {}; 
+        let nameLabelsMap = {}; // Guardamos los marcadores de nombre indexados por manzana
+        let globalSheetData = []; 
 
         async function initMap() {
             map = new google.maps.Map(document.getElementById("map"), {
-                zoom: 15, 
-                center: { lat: -33.2915, lng: -66.3305 }, 
-                mapTypeId: 'terrain',
-                mapTypeControl: false
+                zoom: 15, center: { lat: -33.2915, lng: -66.3305 }, 
+                mapTypeId: 'terrain', mapTypeControl: false
             });
 
-            // Estilos dinámicos ajustados para usar colores del JSON
             map.data.setStyle((feature) => {
+                const geomType = feature.getGeometry().getType();
                 const status = feature.getProperty('status');
                 const isAsignado = status === 'Asignado';
-                
-                // Extraer colores originales o usar valores por defecto
+
+                if (geomType === 'Point') {
+                    let iconPath = feature.getProperty('icon') || 'images/default.png';
+                    return {
+                        icon: { url: iconPath, scaledSize: new google.maps.Size(32, 32), anchor: new google.maps.Point(16, 32) },
+                        title: feature.getProperty('name')
+                    };
+                }
+
                 const originalFill = feature.getProperty('fill') || '#4F46E5';
                 const originalStroke = feature.getProperty('stroke') || '#4338CA';
 
                 return {
-                    fillColor: isAsignado ? '#EF4444' : originalFill,
-                    fillOpacity: isAsignado ? 0.6 : 0.35,
-                    strokeColor: isAsignado ? '#B91C1C' : originalStroke,
-                    strokeWeight: 2,
-                    zIndex: isAsignado ? 2 : 1
+                    fillColor: isAsignado ? '#1a1a1a' : originalFill,
+                    fillOpacity: isAsignado ? 0.7 : 0.35,
+                    strokeColor: isAsignado ? '#000000' : originalStroke,
+                    strokeWeight: 2, zIndex: isAsignado ? 2 : 1
                 };
             });
 
@@ -473,32 +574,105 @@
             map.data.forEach(f => f.getGeometry().forEachLatLng(p => bounds.extend(p)));
             map.fitBounds(bounds);
 
+            // Carga inicial de asignaciones
             await loadExistingAssignments();
 
-            map.data.addListener('click', (event) => {
-                handlePolygonClick(event.feature);
+            // Listener de Zoom para ajustar tamaño de texto
+            map.addListener('zoom_changed', () => {
+                updateLabelSizes();
+            });
+
+            map.data.addListener('click', (event) => handlePolygonClick(event.feature));
+        }
+
+        // Ajusta el tamaño de la fuente según el zoom (Más pequeño ahora)
+        function updateLabelSizes() {
+            const zoom = map.getZoom();
+            // Nueva escala mas pequeña: zoom 15 = 9px, zoom 17 = 12px, zoom 13 = 6px
+            const newSize = Math.max(6, (zoom - 15) * 1.5 + 9) + "px";
+            
+            Object.values(nameLabelsMap).forEach(marker => {
+                const label = marker.getLabel();
+                if (label) {
+                    label.fontSize = newSize;
+                    marker.setLabel(label);
+                }
+            });
+        }
+
+        // Dibuja o actualiza la posición de las etiquetas de nombre
+        function refreshNameLabels() {
+            map.data.forEach(feature => {
+                if (feature.getGeometry().getType() === 'Polygon') {
+                    const name = feature.getProperty('name');
+                    if (!name) return;
+
+                    const status = feature.getProperty('status');
+                    const isAsignado = status === 'Asignado';
+                    let center = getPolygonCenter(feature);
+                    
+                    // Si está asignado, subimos el nombre un poco mas para que quede arriba de la X
+                    if (isAsignado) {
+                        center = { lat: center.lat() + 0.00018, lng: center.lng() };
+                    }
+
+                    const zoom = map.getZoom();
+                    const fontSize = Math.max(6, (zoom - 15) * 1.5 + 9) + "px";
+                    
+                    // Ajuste de color: Blanco si está asignado (fondo oscuro), gris suave si no
+                    const textColor = isAsignado ? "white" : "#666666";
+
+                    if (nameLabelsMap[name]) {
+                        nameLabelsMap[name].setPosition(center);
+                        const label = nameLabelsMap[name].getLabel();
+                        label.fontSize = fontSize;
+                        label.color = textColor; // Actualizar color dinámicamente
+                        nameLabelsMap[name].setLabel(label);
+                    } else {
+                        const labelMarker = new google.maps.Marker({
+                            position: center,
+                            map: map,
+                            icon: { path: google.maps.SymbolPath.CIRCLE, scale: 0 },
+                            label: {
+                                text: name,
+                                color: textColor,
+                                fontSize: fontSize,
+                                fontWeight: "bold"
+                            },
+                            zIndex: 5,
+                            clickable: false
+                        });
+                        nameLabelsMap[name] = labelMarker;
+                    }
+                }
             });
         }
 
         async function loadExistingAssignments() {
             try {
                 const response = await fetch(`${APPS_SCRIPT_URL}?t=${Date.now()}`);
-                const sheetData = await response.json();
+                globalSheetData = await response.json();
                 
-                sheetData.forEach(item => {
+                map.data.forEach(f => f.setProperty('status', 'Sin asignar'));
+                Object.values(statusMarkers).forEach(m => m.setMap(null));
+                statusMarkers = {};
+
+                globalSheetData.forEach(item => {
                     map.data.forEach(feature => {
                         const fName = feature.getProperty('name');
-                        if (fName && fName.toString().trim() === item.zona.toString().trim()) {
+                        if (fName && fName.toString().trim() === item.manzana.toString().trim()) {
                             feature.setProperty('status', item.accion);
-                            if (item.accion === "Asignado") {
+                            if (item.accion === "Asignado" && feature.getGeometry().getType() === 'Polygon') {
                                 drawXInCenter(feature);
                             }
                         }
                     });
                 });
+                
+                // Refrescamos etiquetas después de cargar estados
+                refreshNameLabels();
                 document.getElementById("sync-status").innerText = "Sincronizado";
             } catch (e) { 
-                console.error("Error cargando Sheet:", e);
                 document.getElementById("sync-status").innerText = "Offline";
             }
         }
@@ -512,21 +686,11 @@
         function drawXInCenter(feature) {
             const name = feature.getProperty('name');
             const center = getPolygonCenter(feature);
-
-            if (statusMarkers[name]) statusMarkers[name].setMap(null);
-
             const marker = new google.maps.Marker({
-                position: center,
-                map: map,
+                position: center, map: map,
                 label: { text: "X", color: "#FFFFFF", fontSize: "14px", fontWeight: "bold" },
-                icon: {
-                    path: google.maps.SymbolPath.CIRCLE,
-                    scale: 10,
-                    fillColor: "#FF0000",
-                    fillOpacity: 1,
-                    strokeWeight: 2,
-                    strokeColor: "white"
-                }
+                icon: { path: google.maps.SymbolPath.CIRCLE, scale: 10, fillColor: "#000000", fillOpacity: 1, strokeWeight: 2, strokeColor: "white" },
+                zIndex: 6 // Por encima del nombre
             });
             statusMarkers[name] = marker;
         }
@@ -535,73 +699,69 @@
             selectedFeature = feature;
             const name = feature.getProperty('name') || "Sin nombre";
             const status = feature.getProperty('status') || "Sin asignar";
+            const geomType = feature.getGeometry().getType();
 
-            document.getElementById("polygon-title").innerText = "Zona: " + name;
-            document.getElementById("polygon-info").innerText = "Estado: " + status;
+            document.getElementById("polygon-title").innerText = (geomType === 'Point' ? "Punto: " : "Manzana: ") + name;
             
-            document.getElementById("action-select").value = status;
-            toggleAssignmentFields();
-            document.getElementById("options-container").classList.remove("hidden");
-        }
-
-        async function saveToSheet() {
-            if (!selectedFeature) return;
-            const loader = document.getElementById("loader");
-            const action = document.getElementById("action-select").value;
-            const name = selectedFeature.getProperty('name');
-            const center = getPolygonCenter(selectedFeature);
-            
-            loader.style.display = "flex";
-            const payload = {
-                zona: name,
-                accion: action,
-                publicador: document.getElementById("publisher-name").value,
-                fecha_asignacion: document.getElementById("assignment-date").value,
-                comentario: document.getElementById("comment-area").value,
-                coordenadas: `${center.lat()}, ${center.lng()}`,
-                fecha_registro: new Date().toLocaleString()
-            };
-
-            try {
-                await fetch(APPS_SCRIPT_URL, {
-                    method: "POST", 
-                    mode: "no-cors",
-                    headers: { "Content-Type": "text/plain" },
-                    body: JSON.stringify(payload)
-                });
-
-                selectedFeature.setProperty('status', action);
-                if (action === "Asignado") {
-                    drawXInCenter(selectedFeature);
-                } else {
-                    if (statusMarkers[name]) {
-                        statusMarkers[name].setMap(null);
-                        delete statusMarkers[name];
-                    }
-                }
-
-                showToast("¡Cambio registrado!");
-                resetForm();
-            } catch (error) { 
-                showToast("Error de conexión", true); 
-            } finally { 
-                loader.style.display = "none"; 
-            }
-        }
-
-        function toggleAssignmentFields() {
-            const isAsignado = document.getElementById("action-select").value === "Asignado";
-            document.getElementById("assigned-fields").classList.toggle("hidden", !isAsignado);
-            if (isAsignado && !document.getElementById("assignment-date").value) {
+            if (status === "Asignado") {
+                const assignment = globalSheetData.find(item => item.manzana.toString().trim() === name.toString().trim());
+                
+                document.getElementById("polygon-info").innerText = "Esta manzana está asignada.";
+                document.getElementById("display-publisher").innerText = assignment ? assignment.publicador : "No disponible";
+                document.getElementById("display-date").innerText = assignment ? assignment.fecha_asignacion : "Desconocida";
+                
+                document.getElementById("options-container").classList.add("hidden");
+                document.getElementById("completion-container").classList.remove("hidden");
+                document.getElementById("completion-date").valueAsDate = new Date();
+            } else {
+                document.getElementById("polygon-info").innerText = "Manzana libre para asignar.";
+                document.getElementById("options-container").classList.remove("hidden");
+                document.getElementById("completion-container").classList.add("hidden");
+                document.getElementById("publisher-name").value = "";
                 document.getElementById("assignment-date").valueAsDate = new Date();
             }
         }
 
-        function resetForm() {
+        async function saveToSheet(targetAction) {
+            if (!selectedFeature) return;
+            const loader = document.getElementById("loader");
+            const name = selectedFeature.getProperty('name');
+            const pos = selectedFeature.getGeometry().getType() === 'Point' ? selectedFeature.getGeometry().get() : getPolygonCenter(selectedFeature);
+            
+            const publisher = document.getElementById("publisher-name").value;
+            const assignDate = document.getElementById("assignment-date").value;
+            const completeDate = document.getElementById("completion-date").value;
+
+            if (targetAction === 'Asignado' && !publisher) {
+                showToast("Por favor, ingresa un nombre", true);
+                return;
+            }
+
+            loader.style.display = "flex";
+            const payload = {
+                manzana: name, 
+                accion: targetAction,
+                publicador: targetAction === 'Asignado' ? publisher : "",
+                fecha_asignacion: targetAction === 'Asignado' ? assignDate : "",
+                comentario: targetAction === 'Asignado' ? "" : "Terminado el " + completeDate,
+                coordenadas: `${pos.lat()}, ${pos.lng()}`,
+                fecha_registro: new Date().toLocaleString()
+            };
+
+            try {
+                await fetch(APPS_SCRIPT_URL, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain" }, body: JSON.stringify(payload) });
+                showToast(targetAction === 'Asignado' ? "Manzana asignada" : "Manzana liberada");
+                await loadExistingAssignments();
+                resetPanel();
+            } catch (error) { showToast("Error de conexión", true); }
+            finally { loader.style.display = "none"; }
+        }
+
+        function resetPanel() {
             document.getElementById("options-container").classList.add("hidden");
+            document.getElementById("completion-container").classList.add("hidden");
+            document.getElementById("polygon-title").innerText = "Selecciona un elemento";
             selectedFeature = null;
-            document.getElementById("publisher-name").value = "";
-            document.getElementById("comment-area").value = "";
         }
 
         function showToast(msg, isError = false) {
@@ -609,7 +769,7 @@
             t.innerText = msg;
             t.className = `fixed bottom-5 right-5 transform transition-all duration-300 px-6 py-3 rounded-lg shadow-2xl z-50 ${isError ? "bg-red-600" : "bg-green-600"} text-white`;
             t.classList.remove("translate-y-20", "opacity-0");
-            setTimeout(() => t.classList.add("translate-y-20", "opacity-0"), 3000);
+            setTimeout(() => t.classList.add("translate-y-20", "opacity-0"), 4000);
         }
 
         window.onload = initMap;
