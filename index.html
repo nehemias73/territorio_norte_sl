@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Gestión de Manzanas Pro - San Luis</title>
+    <title>Gestión de Manzanas Norte - San Luis</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDWopeo-2DngZZQdziXRC-93YzYlAyIqiY&libraries=geometry"></script>
     <style>
@@ -33,15 +33,28 @@
                 transform: translateY(0);
             }
         }
+
+        /* Estilo para la lista de asignadas */
+        .assigned-item:active { background-color: #f3f4f6; }
+        
+        /* Ocultar barra de scroll pero mantener funcionalidad */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
 <body class="bg-gray-50 font-sans antialiased overflow-hidden">
 
     <nav class="bg-indigo-700 text-white h-16 flex justify-between items-center px-4 shadow-md z-50 relative">
-        <h1 class="text-lg font-bold">GeoRegistro Pro</h1>
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-3">
+            <h1 class="text-lg font-bold">Territorio Norte - SL</h1>
             <div class="text-[10px] bg-indigo-800 px-3 py-1 rounded-full border border-indigo-400/30 font-medium" id="sync-status">Sincronizando...</div>
         </div>
+        
+        <!-- Botón para ver listado directamente (útil en móvil) -->
+        <button onclick="showAssignedList()" class="p-2 hover:bg-indigo-600 rounded-lg transition-colors flex items-center gap-2" title="Lista de asignadas">
+            <span class="hidden md:block text-xs font-bold uppercase tracking-wider">Ver Asignadas</span>
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+        </button>
     </nav>
 
     <div class="flex flex-col md:flex-row relative">
@@ -50,20 +63,16 @@
         </div>
 
         <!-- Panel de Control -->
-        <div id="side-panel" class="w-full md:w-96 bg-white border-l border-gray-200 overflow-y-auto transition-all duration-300">
+        <div id="side-panel" class="w-full md:w-96 bg-white border-l border-gray-200 overflow-y-auto transition-all duration-300 no-scrollbar">
             <div class="p-6">
                 <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-xl font-extrabold text-gray-900" id="polygon-title">Manzana seleccionada</h2>
-                    <button onclick="closePanel()" class="md:hidden p-2 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">
+                    <h2 class="text-xl font-extrabold text-gray-900" id="panel-title">Listado de Asignadas</h2>
+                    <button onclick="closePanel()" class="p-2 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">
                         <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                     </button>
                 </div>
                 
-                <div id="polygon-info" class="text-sm text-gray-500 mb-6 bg-gray-50 p-4 rounded-xl border border-dashed border-gray-300">
-                    Toca un área del mapa para gestionar su estado.
-                </div>
-                
-                <!-- VISTA: ASIGNACIÓN -->
+                <!-- VISTA 1: ASIGNACIÓN -->
                 <div id="options-container" class="space-y-4 hidden">
                     <div class="flex items-center gap-2 text-green-700 font-bold text-sm bg-green-100 p-3 rounded-lg">
                         <span class="relative flex h-3 w-3">
@@ -94,7 +103,7 @@
                     </button>
                 </div>
 
-                <!-- VISTA: COMPLETAR -->
+                <!-- VISTA 2: COMPLETAR -->
                 <div id="completion-container" class="space-y-4 hidden">
                     <div class="p-6 bg-gray-900 rounded-3xl shadow-2xl text-white relative overflow-hidden">
                         <div class="absolute top-0 right-0 p-4 opacity-10">
@@ -121,6 +130,35 @@
                     <button onclick="saveToSheet('Sin asignar')" class="w-full mt-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-5 rounded-2xl shadow-xl transform active:scale-95 transition-all text-lg">
                         Liberar Manzana
                     </button>
+                </div>
+
+                <!-- VISTA 3: LISTADO DE ASIGNADAS (Inventario por defecto) -->
+                <div id="inventory-container" class="space-y-4">
+                    <div class="flex flex-col gap-3 mb-4">
+                        <div class="relative">
+                            <svg class="absolute left-3 top-3 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                            <input type="text" id="inventory-search" oninput="renderAssignedList()" placeholder="Buscar por publicador..." class="w-full pl-10 pr-4 py-3 bg-gray-100 rounded-xl border-none text-sm focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <label class="text-[10px] font-bold uppercase text-gray-400 whitespace-nowrap">Ordenar por:</label>
+                            <select id="inventory-sort" onchange="renderAssignedList()" class="w-full bg-white border border-gray-200 rounded-lg text-xs font-semibold py-2 px-3 outline-none focus:border-indigo-500">
+                                <option value="date_desc">Fecha (Reciente)</option>
+                                <option value="date_asc">Fecha (Antigua)</option>
+                                <option value="name_asc">Manzana (A-Z)</option>
+                                <option value="pub_asc">Publicador (A-Z)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="assigned-list-content" class="space-y-2">
+                        <!-- Se llena dinámicamente -->
+                    </div>
+                    <div id="empty-list-msg" class="text-center py-10 hidden text-gray-400">
+                        <div class="bg-gray-50 rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-3">
+                            <svg class="w-6 h-6 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path></svg>
+                        </div>
+                        <p class="italic text-sm">No hay manzanas asignadas actualmente.</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -590,7 +628,7 @@
         let statusMarkers = {}; 
         let nameLabelsMap = {}; 
         let globalSheetData = []; 
-        let labelVisibilityThreshold = 18; // Solo visibles en zoom extremo para fluidez máxima
+        let labelVisibilityThreshold = 20; //zoom del mapa
 
         async function initMap() {
             map = new google.maps.Map(document.getElementById("map"), {
@@ -634,16 +672,13 @@
 
             await loadExistingAssignments();
 
-            // Optimización de visibilidad instantánea
             map.addListener('zoom_changed', toggleLabelsVisibility);
-
             map.data.addListener('click', (event) => handlePolygonClick(event.feature));
         }
 
         function toggleLabelsVisibility() {
             const zoom = map.getZoom();
             const visible = zoom >= labelVisibilityThreshold;
-            
             Object.values(nameLabelsMap).forEach(marker => {
                 if (marker.getVisible() !== visible) marker.setVisible(visible);
             });
@@ -720,6 +755,7 @@
                 
                 refreshNameLabels();
                 updateSyncStatus("Sincronizado", "bg-emerald-500");
+                renderAssignedList(); // Renderizar lista al cargar
             } catch (e) { 
                 updateSyncStatus("Offline", "bg-rose-500");
             }
@@ -745,11 +781,10 @@
                 map: map,
                 label: { text: "X", color: "#FFFFFF", fontSize: "14px", fontWeight: "900" },
                 icon: { path: google.maps.SymbolPath.CIRCLE, scale: 12, fillColor: "#000000", fillOpacity: 1, strokeWeight: 2, strokeColor: "white" },
-                zIndex: 10, // Asegurar que esté por encima de todo
+                zIndex: 10,
                 optimized: true
             });
             
-            // HACE QUE LA X SEA CLICKEABLE
             marker.addListener('click', () => {
                 handlePolygonClick(feature);
             });
@@ -765,19 +800,18 @@
             const panel = document.getElementById("side-panel");
             panel.classList.add("active");
             
-            document.getElementById("polygon-title").innerText = "Manzana " + name;
+            document.getElementById("panel-title").innerText = "Manzana " + name;
+            document.getElementById("inventory-container").classList.add("hidden");
             
             if (status === "Asignado") {
                 const assignment = globalSheetData.find(item => item.manzana.toString().trim() === name.toString().trim());
-                document.getElementById("polygon-info").innerText = "Actualmente bajo trabajo de campo.";
-                document.getElementById("display-publisher").innerText = assignment ? assignment.publicador : "N/A";
-                document.getElementById("display-date").innerText = assignment ? assignment.fecha_asignacion : "N/A";
-                
                 document.getElementById("options-container").classList.add("hidden");
                 document.getElementById("completion-container").classList.remove("hidden");
+                
+                document.getElementById("display-publisher").innerText = assignment ? assignment.publicador : "N/A";
+                document.getElementById("display-date").innerText = assignment ? assignment.fecha_asignacion : "N/A";
                 document.getElementById("completion-date").valueAsDate = new Date();
             } else {
-                document.getElementById("polygon-info").innerText = "Esta manzana está lista para ser asignada.";
                 document.getElementById("options-container").classList.remove("hidden");
                 document.getElementById("completion-container").classList.add("hidden");
                 document.getElementById("publisher-name").value = "";
@@ -785,9 +819,98 @@
             }
         }
 
-        function closePanel() {
-            document.getElementById("side-panel").classList.remove("active");
+        function showAssignedList() {
             selectedFeature = null;
+            const panel = document.getElementById("side-panel");
+            panel.classList.add("active");
+            
+            document.getElementById("panel-title").innerText = "Listado de Asignadas";
+            document.getElementById("options-container").classList.add("hidden");
+            document.getElementById("completion-container").classList.add("hidden");
+            document.getElementById("inventory-container").classList.remove("hidden");
+            
+            renderAssignedList();
+        }
+
+        function renderAssignedList() {
+            const listContent = document.getElementById("assigned-list-content");
+            const emptyMsg = document.getElementById("empty-list-msg");
+            const searchInput = document.getElementById("inventory-search");
+            const searchTerm = searchInput ? searchInput.value.toLowerCase() : "";
+            const sortSelect = document.getElementById("inventory-sort");
+            const sortBy = sortSelect ? sortSelect.value : "date_desc";
+            
+            listContent.innerHTML = "";
+            
+            let filtered = globalSheetData.filter(item => {
+                const isAssigned = item.accion === "Asignado";
+                const matchesSearch = item.publicador && item.publicador.toLowerCase().includes(searchTerm);
+                return isAssigned && matchesSearch;
+            });
+
+            // Ordenar datos
+            filtered.sort((a, b) => {
+                switch (sortBy) {
+                    case "name_asc":
+                        return a.manzana.localeCompare(b.manzana);
+                    case "pub_asc":
+                        return (a.publicador || "").localeCompare(b.publicador || "");
+                    case "date_asc":
+                        return new Date(a.fecha_asignacion) - new Date(b.fecha_asignacion);
+                    case "date_desc":
+                    default:
+                        return new Date(b.fecha_asignacion) - new Date(a.fecha_asignacion);
+                }
+            });
+            
+            if (filtered.length === 0) {
+                emptyMsg.classList.remove("hidden");
+            } else {
+                emptyMsg.classList.add("hidden");
+                filtered.forEach(item => {
+                    const card = document.createElement("div");
+                    card.className = "assigned-item p-4 bg-gray-50 rounded-xl border border-gray-200 cursor-pointer hover:border-indigo-400 transition-all shadow-sm active:scale-[0.98]";
+                    card.innerHTML = `
+                        <div class="flex justify-between items-center">
+                            <div class="flex-grow pr-2">
+                                <p class="text-[10px] font-black text-indigo-600 uppercase tracking-tighter mb-1">Manzana ${item.manzana}</p>
+                                <p class="text-sm font-bold text-gray-800 truncate w-40 md:w-full">${item.publicador || "Sin nombre"}</p>
+                            </div>
+                            <div class="text-right shrink-0">
+                                <p class="text-[9px] uppercase font-bold text-gray-400 mb-1">Asignada</p>
+                                <p class="text-[11px] font-semibold text-gray-600 bg-white px-2 py-1 rounded-md border border-gray-100">${item.fecha_asignacion || "-"}</p>
+                            </div>
+                        </div>
+                    `;
+                    card.onclick = () => focusManzana(item.manzana);
+                    listContent.appendChild(card);
+                });
+            }
+        }
+
+        function focusManzana(name) {
+            let targetFeature = null;
+            map.data.forEach(feature => {
+                if (feature.getProperty('name') === name) {
+                    targetFeature = feature;
+                }
+            });
+            
+            if (targetFeature) {
+                const center = getPolygonCenter(targetFeature);
+                map.panTo(center);
+                map.setZoom(17);
+                handlePolygonClick(targetFeature);
+            }
+        }
+
+        function closePanel() {
+            // En móvil se oculta el panel. En desktop se mantiene pero vuelve al listado.
+            if (window.innerWidth <= 768) {
+                document.getElementById("side-panel").classList.remove("active");
+            }
+            selectedFeature = null;
+            showAssignedList();
         }
 
         async function saveToSheet(targetAction) {
