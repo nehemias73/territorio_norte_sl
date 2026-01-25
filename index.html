@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Gestión de Manzanas Norte - San Luis</title>
-    <link rel="icon" href="images/ico.ico" type="image/ico">
+    <link rel="icon" href="images/icon-1.png" type="image/png">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDWopeo-2DngZZQdziXRC-93YzYlAyIqiY&libraries=geometry"></script>
     <style>
@@ -1230,6 +1230,8 @@
             // MOSTRAR IMAGEN DE LA MANZANA
             const imgContainer = document.getElementById("manzana-image-container");
             const imgElement = document.getElementById("manzana-image");
+            let imageUrl = "";
+
             if (imgContainer && imgElement) {
                 imgElement.style.display = ''; // Resetear por si se ocultó por error anteriormente
                 imgContainer.style.display = ''; 
@@ -1237,10 +1239,11 @@
                 
                 // Lógica para cargar desde Drive o Local
                 if (DRIVE_IMAGE_IDS[name]) {
-                    imgElement.src = `https://drive.google.com/thumbnail?id=${DRIVE_IMAGE_IDS[name]}&sz=w1000`;
+                    imageUrl = `https://drive.google.com/thumbnail?id=${DRIVE_IMAGE_IDS[name]}&sz=w1000`;
                 } else {
-                    imgElement.src = `images/manzanas/${name}.png`; 
+                    imageUrl = `images/manzanas/${name}.png`; 
                 }
+                imgElement.src = imageUrl;
             }
             
             // CONFIGURAR BOTÓN COMPARTIR
@@ -1251,7 +1254,7 @@
                 const assignment = globalSheetData.find(item => item.manzana.toString().trim() === name.toString().trim());
                 // Si está asignado usamos el nombre, si no "Disponible"
                 const publisherName = (status === "Asignado" && assignment) ? assignment.publicador : "Disponible";
-                shareBtn.onclick = () => shareAssignment(name, publisherName);
+                shareBtn.onclick = () => shareAssignment(name, publisherName, imageUrl);
             }
             
             if (status === "Asignado") {
@@ -1427,29 +1430,63 @@
         }
 
         // Función para compartir mediante API nativa
-        async function shareAssignment(name, publisher) {
+        async function shareAssignment(name, publisher, imageUrl) {
+            const shareBtn = document.getElementById("btn-share-manzana");
+            const originalText = shareBtn.innerHTML;
+            // Mostrar indicador de carga en el botón
+            shareBtn.innerHTML = `<svg class="animate-spin h-5 w-5 text-indigo-700 inline mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Preparando...`;
+            shareBtn.disabled = true;
+
             let text = `Manzana ${name}`;
             if (publisher && publisher !== "Disponible") {
                 text += ` asignada a ${publisher}.`;
             } else {
                 text += ` está disponible.`;
             }
-            const shareData = {
-                title: `Manzana ${name}`,
-                text: text,
-                url: window.location.href
-            };
 
             try {
+                // 1. Intentar compartir la IMAGEN (Archivo)
+                if (imageUrl && navigator.canShare && navigator.share) {
+                    try {
+                        const response = await fetch(imageUrl);
+                        const blob = await response.blob();
+                        const file = new File([blob], `manzana-${name}.png`, { type: blob.type });
+                        
+                        const shareDataImage = {
+                            files: [file],
+                            title: `Manzana ${name}`,
+                            text: text
+                        };
+
+                        if (navigator.canShare(shareDataImage)) {
+                            await navigator.share(shareDataImage);
+                            return; // Si tuvo éxito, terminamos aquí
+                        }
+                    } catch (e) {
+                        console.warn("No se pudo compartir la imagen (posible bloqueo de seguridad), intentando solo texto.", e);
+                    }
+                }
+
+                // 2. Fallback: Compartir solo TEXTO y URL (si falla la imagen o no es soportado)
+                const shareDataText = {
+                    title: `Manzana ${name}`,
+                    text: text,
+                    url: window.location.href
+                };
+
                 if (navigator.share) {
-                    await navigator.share(shareData);
+                    await navigator.share(shareDataText);
                 } else {
-                    // Fallback: Copiar al portapapeles
-                    navigator.clipboard.writeText(`${shareData.text} - ${shareData.url}`);
+                    // Fallback final: Copiar al portapapeles
+                    navigator.clipboard.writeText(`${shareDataText.text} - ${shareDataText.url}`);
                     showToast("Enlace copiado al portapapeles", false);
                 }
             } catch (err) {
                 console.error("Error al compartir:", err);
+            } finally {
+                // Restaurar el botón
+                shareBtn.innerHTML = originalText;
+                shareBtn.disabled = false;
             }
         }
     </script>
