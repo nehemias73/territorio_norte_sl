@@ -103,7 +103,7 @@
                 
                 <!-- CONTENEDOR DE IMAGEN DE MANZANA -->
                 <div id="manzana-image-container" class="mb-6 hidden rounded-xl overflow-hidden shadow-lg h-48 bg-gray-100 relative group">
-                    <img id="manzana-image" src="" alt="Mapa de la manzana" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110 cursor-zoom-in" onclick="openZoom(this.src)" onerror="this.style.display='none'; this.parentElement.style.display='none'">
+                    <img id="manzana-image" src="" alt="Mapa de la manzana" referrerpolicy="no-referrer" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110 cursor-zoom-in" onclick="openZoom(this.src)" onerror="this.style.display='none'; this.parentElement.style.display='none'">
                     <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors pointer-events-none"></div>
                 </div>
 
@@ -1236,7 +1236,7 @@
                 
                 // Lógica para cargar desde Drive o Local
                 if (DRIVE_IMAGE_IDS[name]) {
-                    imgElement.src = `https://lh3.googleusercontent.com/d/${DRIVE_IMAGE_IDS[name]}`;
+                    imgElement.src = `https://drive.google.com/uc?export=view&id=${DRIVE_IMAGE_IDS[name]}`;
                 } else {
                     imgElement.src = `images/manzanas/${name}.png`; 
                 }
@@ -1454,7 +1454,7 @@
     </script>
 
     <div id="imageModal" onclick="this.style.display='none'">
-        <img id="imgFull" src="" alt="Mapa ampliado">
+        <img id="imgFull" src="" alt="Mapa ampliado" referrerpolicy="no-referrer">
     </div>
 </body>
 </html>
