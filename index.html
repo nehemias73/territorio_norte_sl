@@ -1444,6 +1444,14 @@
                 text += ` está disponible.`;
             }
 
+            // Determinar URL a compartir (Drive o Local)
+            let shareUrl = window.location.href;
+            if (typeof DRIVE_IMAGE_IDS !== 'undefined' && DRIVE_IMAGE_IDS[name]) {
+                shareUrl = `https://drive.google.com/file/d/${DRIVE_IMAGE_IDS[name]}/view?usp=sharing`;
+            } else if (imageUrl && !imageUrl.startsWith('http')) {
+                shareUrl = new URL(imageUrl, window.location.href).href;
+            }
+
             try {
                 // 1. Intentar compartir la IMAGEN (Archivo)
                 if (imageUrl && navigator.canShare && navigator.share) {
@@ -1455,7 +1463,8 @@
                         const shareDataImage = {
                             files: [file],
                             title: `Manzana ${name}`,
-                            text: text
+                            text: text,
+                            url: shareUrl
                         };
 
                         if (navigator.canShare(shareDataImage)) {
@@ -1471,7 +1480,7 @@
                 const shareDataText = {
                     title: `Manzana ${name}`,
                     text: text,
-                    url: window.location.href
+                    url: shareUrl
                 };
 
                 if (navigator.share) {
