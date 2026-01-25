@@ -40,6 +40,35 @@
         /* Ocultar barra de scroll pero mantener funcionalidad */
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        /* Modal para imagen ampliada */
+
+        #imageModal {
+            display: none;
+            position: fixed;
+            z-index: 3000;
+            left: 0; top: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95);
+            backdrop-filter: blur(5px);
+            cursor: zoom-out;
+        }
+
+        #imgFull {
+            margin: auto;
+            display: block;
+            max-width: 95%;
+            max-height: 95%;
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%) scale(1);
+            border-radius: 12px;
+            animation: zoom 0.3s ease-out;
+        }
+
+@keyframes zoom {
+    from { transform: translate(-50%, -50%) scale(0.8); opacity: 0; }
+    to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
     </style>
 </head>
 <body class="bg-gray-50 font-sans antialiased overflow-hidden">
@@ -72,6 +101,20 @@
                     </button>
                 </div>
                 
+                <!-- CONTENEDOR DE IMAGEN DE MANZANA -->
+                <div id="manzana-image-container" class="mb-6 hidden rounded-xl overflow-hidden shadow-lg h-48 bg-gray-100 relative group">
+                    <img id="manzana-image" src="" alt="Mapa de la manzana" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110 cursor-zoom-in" onclick="openZoom(this.src)" onerror="this.style.display='none'; this.parentElement.style.display='none'">
+                    <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors pointer-events-none"></div>
+                </div>
+
+                <!-- BOTÓN COMPARTIR -->
+                <div id="share-container" class="mb-6 hidden">
+                    <button id="btn-share-manzana" class="w-full flex items-center justify-center gap-2 bg-indigo-50 text-indigo-700 border border-indigo-200 font-bold py-3 px-4 rounded-xl hover:bg-indigo-100 transition-colors shadow-sm">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path></svg>
+                        Compartir
+                    </button>
+                </div>
+
                 <!-- VISTA 1: ASIGNACIÓN -->
                 <div id="options-container" class="space-y-4 hidden">
                     <div class="flex items-center gap-2 text-green-700 font-bold text-sm bg-green-100 p-3 rounded-lg">
@@ -177,6 +220,369 @@
     <script>
         const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwS9l6WFj-tlwx1QnC_g5seS4yhHimTKKD66bRM8QEUNHgZ4pvVuSMciarZAkO0_FGsRw/exec"; 
         
+        // CONFIGURACIÓN DE IMÁGENES DE DRIVE
+        // Pega aquí el ID del archivo de Drive correspondiente a cada manzana.
+        const DRIVE_IMAGE_IDS = {
+            "42-b": "1J0_xEAF-0Pryv1H2DcqPpcrSFv0XTPZz",
+            "42-a": "1d4uRoeqFJY_EGN5lGCHpiGhF2mJaAkG1",
+            "41-d": "1Ci051YOoePeiTrdGJ39AeIsm61cLALqR",
+            "41-c": "1o0UAZQr2WWSIMH8dHl6ZmFHuLr8gnrKo",
+            "41-b": "114d44VfDwnssKBiB6YJ9yWx4ley4nAGq",
+            "41-a": "1whnHSvOTHa_xGxNZ0j6oY-rLl1hOXHR_",
+            "77c": "1zOIpoJ5wtWalx4_iDIk3QGr0y19Kq07J",
+            "77b": "1VP_Z_Qx7BiwG7jcRzPD4wk0p6RXGy8w0",
+            "77a": "1ovaeXRKRc_5xsOFepW8hx7xE4mOeql7S",
+            "76d": "1T-qll-56l2iKN_OVpwpFxM0qDaPurckZ",
+            "76e": "1XN83LjOvhCew2uy4Bbt-IAFwPKjhCSkY",
+            "76b": "1ZgYzrptY_g3CGg7V3fDBZcun8LqdDKga",
+            "76c": "1qScMQkgxn6q2d_jDYabsSrQjQB4hO_-n",
+            "76a": "1vsAQVi2iaiZKU8yqoz5IijU_gdagMmQa",
+            "75a": "15ceRaYgXHsxwAKcfFXsc8h9vwHzzJdhg",
+            "75c": "1KNnLLFRG9c2jM5a9dNsc_4tOBYxnvowF",
+            "75b": "1Kb2UP0ZxReaE3Dztiau9Gkw8mw5t7aRu",
+            "74b": "157wOeFPqVvc6rhYUR0ot_714LaH4aWfq",
+            "74a": "1idSpf2S9puzf2icgsinV7qyOcI-qZAGh",
+            "73b": "1GQXJmI4n-c59eGUn6D-MawVMYNXdr0bL",
+            "73e": "1Mg0bcp5s3KVu0hvO1uxWoY7B0hOz24T2",
+            "73d": "1ULWLBEnM_U4o_y2NYiq3iWJqWImmikRQ",
+            "73a": "1Lu5309Qd_ZFkD-gA_UaqH3B1iBpovVAc",
+            "72c": "1cVR34mHUvnwmPw2TgKKeN3EoCzdzpidq",
+            "72b": "1lsCcOzIUv3V04drgpbzoMCd-OrywYmz7",
+            "72a": "1JkAb8TXYUunp8_-hjNYl0Ave4rZFtoYZ",
+            "71b": "1bHI-XYww9rvpgvOcbjkOhp06bnGdbG9Y",
+            "70": "12DREhHKNBoy1vVfuDWD4a0Z8-QfQQiSs",
+            "71a": "1w9tlqvyqCG571etFYFo1WLny3J52qv8M",
+            "68b": "11fBTDkvxsBDMCY1PE3wPgPbgUxONUvc7",
+            "68a": "14i9Kf1RtVziJ-PMdEpxkevDc14ROaEvA",
+            "69a": "14zCrCN8uI7iqYlgSex9bxiGhUyL78GyJ",
+            "69b": "1D_465pOdQ9aaLOgcYg3kKHfA771S-0dQ",
+            "67b": "12vPhg-77Orvu0LvrKpgPI9S6A-BgjA4y",
+            "67d": "1GH-3lS1xPDsF6lDNOtdxElrQiihwjuTq",
+            "67c": "1kW3UT_T7YE_AHUT46eKqdINkeZr0l7LQ",
+            "66c": "1bJiu1DvzhpaCVtK5ZekFkGvPusmX-pys",
+            "67a": "1jLqase4UmABXbYj2COWb6DYbb9hDWNrL",
+            "66d": "1tvaFCwpntobTC3oqUtgMLENO1YlY1WpN",
+            "66a": "11iq_RT2brP-xlBH8b1F9MCgHWJ4BPx5s",
+            "65": "1Uw-QchufHHs0Ih6B8dVvFB0nBxR2WpSw",
+            "66b": "1rn6MBZ7hqyZWtt6KSAWg3W8CPDs2AvKE",
+            "64a": "1L7RVPJXNX9Fw09IvaFyngH0PjnGPe28w",
+            "64b": "1Yk_FrAup6TA7neKZtt5TebH_yotpPTq5",
+            "64c": "1iDIzfpUrSJSc4PaVyclxzMeguf9SJDgK",
+            "63e": "12CLrguBcWlx69RAt1CZKK6d665jpgK45",
+            "63d": "1Vhy8SbwGUk9Nb_hugQUS8rBxtSAklN8s",
+            "63b": "11ZUnJWMwUUZo-c_oNQxdNMnOOIyZy8I8",
+            "63c": "1Jvx4L9qRsIAamAUI3sFHk9wprvUhz0e0",
+            "61d": "1Bl-pCeFPlNmpzyq7_GXOKUbozXJrk05U",
+            "63a": "1IBk64hTVxPENAJ-aTLvNSkOZezD3lsgs",
+            "62": "1zoM6Of3QNZKq2pLC50kWuLheq0u3777A",
+            "61b": "1935Uv9-60QoXmmcRlVp409JP490LJ7O7",
+            "61c": "1VdKpZDzv56qSklrccea91kBv17ZcT3Mm",
+            "61a": "1tKAcHRghBoye3lhm_lC6ZgWFYx_F24e9",
+            "60b": "1SGiUhqy6iW4SK8r2470tAFL-OwtjmVpY",
+            "60a": "1Sn0I_aEhGeYnaLgrSTL0v3N2xukImq3c",
+            "60d": "1k8JVGnSuz5eXRsCq7hHZS-rXRGP2PN_4",
+            "60c": "1qRy4fk2b_fdcnC0gzC7sKGASHtKthyfI",
+            "59d": "10m6th3aTglSoCIeD0NhSCr-UyMCqtK8f",
+            "59b": "1WShgxYPH4Iarzq2LweOFZ7Am9IxtF_4g",
+            "59c": "1m-ygyfTcPD4NKjkHWsilb2qtNOVCGwSH",
+            "59a": "1SVQmTJBywIoMraH6RQPsg3Zj35rtt4m3",
+            "58d": "1lOvnHha788DY7d3YBgBH46576exVI8jf",
+            "58a": "141hq8eZogXma3XuYv-CgGOcowic51pyJ",
+            "58b": "14vxia-rVksNrDqbRwxHakjIkQmMEyeFb",
+            "57l": "1VX0sKLfKHodxJAPUyCAIOnujSndEm3st",
+            "57k": "1kF4U4X5K4axFOsjaSMG2zXRATllohIe6",
+            "57j": "1yhJPC_OfVTkj1hkOA4Z_oYKBz6inwy-9",
+            "57i": "1kICp2Wnwz2OtBzHA6puoI7Rh6pYSUuXs",
+            "57h": "1s19lbB-RbjI5tuhhDfemcn20dvTDdZsy",
+            "57f": "10U--DD5qJs1re5Yh-ic1-rlpsQ6WMLPV",
+            "57e": "1GQ--51IlVdXmiWL_g38nYOkaDuf5iZaC",
+            "57g": "1KMBAGIUB_msPo7jKjYEhWz_XpYPfdRtM",
+            "57d": "1VTBN5zBXChkk_oDrcBQ_gb9WknDzdx6b",
+            "56l": "11_dwD82UzfA_OSHXlgpM7s7QrdCUNIC3",
+            "57c": "1RumZkpeHJNTBp9QWL90EhzBXbHIxK6zy",
+            "57a": "1uMht_pZaK0mCm-N0hVq_S2Z1JIDQOQHL",
+            "57b": "1vYQElOIzl_yKPpb51aZOad410J7m9IVd",
+            "56k": "11U9v_tfulD14x-inGj5LanmDb0275D6p",
+            "56j": "1iBEdqB88RjCA3FyEhrFWf8v5IR1gcwiI",
+            "56i": "1koVBKzAfMebA_p28X7Fh2MuqwlItCbiG",
+            "56e": "1Mkm_EmgpqNKyQLOLV2Dgdhv_aakqYp3k",
+            "56g": "1RPiYxaaJ8RpBFGKZiahDR4-jLiDPJTah",
+            "56f": "1nIRB8KTT5HKaO8Gkjyn07qGN59rOeGFT",
+            "56h": "1xPML9CUw6zgqdsYtDLGjq_iiQmPi7KIs",
+            "56c": "1152Acajghl9TKIue62KoKulQ-C1Y4TlA",
+            "56d": "12sC3Xy3Q_p3dIomzUjNkOM5xKx8oHA4Y",
+            "56b": "1HQv9AcFPPsuEeKVPd_nVZwKSucPokJYf",
+            "55h": "15kbMvdRYxIXuh1o0b0wvvnV22rh6GWvL",
+            "56a": "1LSrzCGlN2cNMlaVGcOCdNQ0P_t3-iOrJ",
+            "55f": "1UWrRjk8NLLYKUb91Mx4A314jPiPhg4rf",
+            "55g": "1bKtw1oXGogUmYoO2I09r0LpcwSZ31SnK",
+            "55e": "1M6H_Lxy_HiEhjRSkjlOrXIgbW1_aPD6E",
+            "55b": "13szI6DcvJtvCOKbFgAyZVUujcmpFQrtY",
+            "55c": "1Wy5GBnh1TAxNQL84UzaBsDOY5MOOOT7U",
+            "55d": "1YrAVczENbhRZA6_wJHA3BOVI541yFp2u",
+            "55a": "1FV2TysFPed7rFePf2froQcMWypbamgLm",
+            "54g": "1JzH3E9UIX2NjdApx-zV7Z3UyaPuae7lU",
+            "54f": "1Y6h95ZZOBEN127zzm6Vj8v4f91CI4U4d",
+            "54e": "1gw9yb1X8v15a8COyWE4PdQJZ8uT8cSBj",
+            "54d": "1vgj6eflfYJTZnfogeFs47hkLus2N8vCr",
+            "54a": "10XD5x_A6bka1X9DUso2AsBtyFNa29mGr",
+            "54b": "1MDMtLsIqe7MoMnerwS-Gck-327b9XBuO",
+            "54c": "1WmF33Uh5gHUXlGJ3UPffbWulO-3dwZj_",
+            "53f": "1_PD7Dd0LqQcYdBdaBcmvs46PxC3Rotxy",
+            "53g": "1h5dBaD-20kEx_7YOeeHxBjCAQpAqfLOW",
+            "53d": "1DLHX8datFbMfZQAuf9qx_5105cHUF9qC",
+            "53e": "1gYP9w_ZHcmZwaLr_wWnHGeXPGxJ9JloT",
+            "53b": "1GjfUcBtiR7n4EPd6lFPwBT2gtWZd9hWK",
+            "53c": "1rm_n2ykbshVjduBsIzzWS6BrMz9lS5SX",
+            "53a": "16Izj_YBnO-xXiZzWFO2ivAKCd2mbzkJw",
+            "52h": "1UBmOcdKyl5DObZGU6v9K2R6BC--QQfQR",
+            "52g": "1iwdjw82N1tfRkbbVb8RH8viHGZr1M7Ce",
+            "52e": "19TIgwv9IP19zbZEYwXVizkZIgs8SpUgo",
+            "52f": "1aUcAphkNXfKl-hUmf8tEtyqcLWL3rv9Q",
+            "52d": "1qRKxI43TTXiej3GLPA8WAOgUJcbviI48",
+            "52c": "19LBSb9HHe00LhlRMO_tRghm4PCPx0p7t",
+            "52b": "1jT55NQ5f6Ta_uzs6NrLWX-BTquffWpwy",
+            "51h": "14bCYOF8ZHTRkPKJ1nJymYtPN8hbBsbbp",
+            "51g": "1P8gj35UWXgBEEk5kyjvX1zgeqaPzXzHu",
+            "52a": "1nK83FxDLK2q--Ov4yLxc_0vbge3qj0Rt",
+            "51e": "1Gku0YzzYHzO4tbFWqxIevzMZCkY2AphL",
+            "51f": "1IVlaGbP0pNcVFWL_Sjpto4xCCFCx0x3F",
+            "51c": "1NAyOXEyihAbJkrxpi_Q7VOIG1EyiEOgI",
+            "51d": "1iUBoG7T5-7Kbex88Sg_ZqsVr03iHTprb",
+            "51a": "1CB39HByr_sogqg0CQJj_HAw2GDNRyUcD",
+            "51b": "1zOs70Ex9q-x0ZXRKWBYsdv9E8rYWUxmB",
+            "50f": "1w6UViM4aTTKTKg4XnXdDDT12XowH2s6k",
+            "50e": "1xFEPn7CzelokL6e5j5S0rSZHeZKoaqdX",
+            "50d": "1BGAdWTNXFB11nEbgDYOrRyEOhhJtq5c3",
+            "50c": "1IG64mZ2um8UuiPDThhPfC_bgjjOlQxMN",
+            "50b": "12t1WJs3sGiCsAkAO21im_QwbN7egP6Ju",
+            "49f": "1NYFuZ5Q4NgMzRNJF9flS4zbshjAlKSch",
+            "50a": "1o5fz9_5PXBHf1xcS7USDr4PMbvuMH5Pi",
+            "49d": "15V-dnHQxrPYAibwywilJOzQkP8_gTSZg",
+            "49e": "1fkS_1qwJhEWLPTv7_A2dX5ZSRkAH5CaI",
+            "49c": "1h_PJ74AZvcUlNUd8SJ_fAWVXMQmp2N_X",
+            "49a": "1jmSjatxiXijFKv4EMxBNOPhg7fdcQSEk",
+            "49b": "1qMbx_2CbrwqCg4jx3A8sBeNNezFNOYKd",
+            "48e": "1GQmo5K3B3KdPgZoSMUf41HgbRFlY4x10",
+            "48f": "1mTG_NrcRjDiPmmXzdsmpaA4kSuaWgkXZ",
+            "48d": "1R3Tl6zooY2rkC5m4raETwKBNX4f-7m_H",
+            "48c": "1xBflxbrNQHbue3ut2JtTcRI4esmAGTtd",
+            "48a": "1BtGIdZsMG_Cs4ZbDHF82YuRHaY-PmVgN",
+            "48b": "1Hk-XEwX8VnaBwvrpEiiXSTs6_h854ihA",
+            "47b": "1JKPx5P6tiJZ58cc4WEDFbBX9hR6LXF6Q",
+            "47a": "1KCJHEahtx0twuR7M-LH4Kp65n-pULX4p",
+            "47d": "1RjWp5xbXq8AFkrgUkKJfc8uvxC1IuJ1u",
+            "47c": "1qAicbSOdECEel6pTpEoEC4Y_jjQVD0ey",
+            "46d": "1HX1CfiUVA2hXVFrhb0bLsW-6vUT1pOLC",
+            "46e": "1aOXqdPCWUBvSO59alg8h4uuaD-sMoDW0",
+            "46c": "1jwitGfG8CGEMXpcmJo16hQlSQzpflxPG",
+            "46a": "16vBCX3qYpAoI5TkpzkJYhEsjVa9b2BYI",
+            "46b": "1NNhNPswDsu3lpAYPLxnEdRSieLOarLrK",
+            "45c": "1_3mDAra1exQJcvvquZ7axHcUeot8W9it",
+            "45a": "1J0ISxBvJsceRtCov0_QBBJ8rA8c3ZzMq",
+            "45b": "1nws-4JOEwsbxY4JV-UghIy40OxblNEAE",
+            "44d": "15qgB7-3-g_JaRpyLrWj_mdnzqc6zu8X8",
+            "44e": "17hbB8U98uTOBd0VeMNF1J-dXOEMsHtSA",
+            "44c": "1hfNmKRJp3OPLBhCA7fJu0XAquhhnOHvD",
+            "44b": "1rEBGUQlhaQor9NQ62RyAYx0ehMqdI3dR",
+            "43c": "12jnLinxvU8OtrgY9tZgXc2t1K9-gbJXc",
+            "44a": "1FIha85ATMopWWHIzNqqyXjErQrT7idXW",
+            "43d": "1l-c3MR0QlFm-9SxXnP2NF1Gy2uyghmN7",
+            "43b": "1D_j_uK632GuvPGi8Ha-Ta45iNJAzBj3y",
+            "43a": "1SBQN9dGvJy2tNBkE8NGAWF4CIBCxwjpH",
+            "42f": "1cAJRMhkzpqNI5QBAJjQLTrJeNGj2-XDz",
+            "42g": "1taDg7Z0izAmRppX8vfl4dfwSOrSMGIYM",
+            "42d": "144I_UGn2pMWZOXNLFQMpOi5imaiuiamg",
+            "42e": "1sKRLWKMRanitmGx2RhTylOfacHiUOv_O",
+            "42c": "16lbNKSu6Sop1N6FZI61DoqXKfCwDCTve",
+            "40d": "1mwoAqg-SVZQfP8VOhHAxM9R4eyonnpxx",
+            "40e": "1pMf65AM3WKlqtvf1OZKO5FQjjPdLFps5",
+            "40b": "1r9P1wQ3MqczfuUuO1g-ENNUz_veVUmEm",
+            "40c": "1sw7H43o_LOZ1QWjxJVeMjAg2ZUSdYG7f",
+            "40a": "1CYREWBwQrh4LKeOuNZsO4W9xKs9RQNAP",
+            "39e": "1krkXySywd5LBXWe_waeRsztJLrJ6Unpp",
+            "39d": "1bzWQe-uxFiuyTP_sQ3gP4vflitvqyEHx",
+            "39c": "1zP7UUcylVGQGcWW8g8KhAJVf4wgyHWqR",
+            "39a": "1HqW4FiaBeEsxTprqrXTXvnujDHbKgzL0",
+            "39b": "1y7tMefuVb2VWMlG5PF62aKUhjI8yfzF7",
+            "37d": "1InSVaiplxAYPa1OkzFbxPjo03YAK8uVR",
+            "37c": "1KQ9SLP5IOOwwseZdQP_HZi9Sp0ATXSsr",
+            "38": "1gciqOCWWqRpsU8hUkTAFLF05okXY6Z1Y",
+            "37b": "1LhBReSHl86CbNr-QseVyUhNnMUNSinwN",
+            "36d": "1VCZlWirHW7c0G9S6ivUV1Qxnicj1eOx1",
+            "37a": "1tRm4j8OvKELz-Ca_xiF8FAek_4qLakxs",
+            "36b": "10BIThIK6jnrk25lmRbUz5_Cj-616Oeqo",
+            "36a": "1SGzlU1BVcCvp-qqMe1k2izABvvawoV4h",
+            "36c": "1iaJo94dG2BAfrJejkpGlfEjO-WyYBvfi",
+            "35d": "1nyjVghM4zb7mkl3fBO0SbkAqQ3QMv0uK",
+            "35c": "1afbba9yU51KV-pa0uOc5X0-K1dC1vUWi",
+            "35b": "1bwV-XrE5m6OeZnbBQ4V305xV4IIU_20O",
+            "34c": "1G71CxMbrmzPaA-AqdnsrtxJpyoQpw-oz",
+            "35a": "1cmkBwSY1CV9PXJm9WmGUmRAnlFlw6tQQ",
+            "34d": "1nZBaiTBmvf09VjCN8ec4iUIYBnZK19Q9",
+            "34b": "1HwZTYwVsC4EhFdx9cOjQpYhgwCIIZGex",
+            "34a": "1TgSI3jxVyeRG2rgqxHIsH3Nb9dP90-ts",
+            "33c": "1rTwF8bPMErz8mNywztwy02DtjFCNoUlx",
+            "33b": "1ScPUNNkpii7_e5tmmvy9t1tbwHR5wmf7",
+            "33a": "1pI2zFI3UKMnCOXLah9gxvj6f9AV505tL",
+            "32e": "1CYTJM0VufKSsQsX3VONiwoc3FyIASMP2",
+            "32d": "1R3AReXAj4QrrtARUPGdptSkBc1jp6PZi",
+            "32c": "1kfE93EPTiNVNTaTR357Bd6D4lXkA2oPY",
+            "32b": "1wR3IMUh21axIma-urddYcmmZmqkZDUJr",
+            "31c": "11arALAYuhrTU637c4OtvFYPRRrxTSRnS",
+            "31d": "1XT9atPGlJj1kj5Vd69_V638m6E_L_Hju",
+            "32a": "1buI4Dx9nwAY_g0zL4ipkPWsK5Le39dtP",
+            "30c": "14H10uqJYqg414r8tuJjzydpu2PmNHJ6L",
+            "31a": "1m61MbzpqMSssXazc8t8Nikdp3IneALqn",
+            "31b": "1v9SQM6lS_20q4dOLtJr37zN66co1zfsX",
+            "30a": "12NLwLEtvymXscVT1beGy6PlhYkqdaxOT",
+            "30b": "13GHrLbJskJIZ7vGPkbsbNARkOvmS9F57",
+            "29e": "13LcndMqaMw5qlTzv9JjEizcZRLxwltcg",
+            "29d": "1KitGEK6Lyop10ks1ayk3Z3Pf3boyouhe",
+            "29b": "1O5thhCpORnjBvBe7GPcu6gQUOY3pK-qQ",
+            "29c": "1b9U9TcWFO2knli2xzwxfcyuvd6UyqxYM",
+            "29a": "1Do7FiBKcvEUKhzhh7ika2vqJXIM1pku3",
+            "28d": "1y5_QXAj8480BgE9YxsKLvRFKGSVDdDgA",
+            "28c": "1wPwAIdWocvMXiy_qgqGEEqsW97Id99NL",
+            "28b": "1ymUdTUf61MATVJs4tTz3dV-PUWbO3dPS",
+            "27c": "1SWW1AMFzhQij1wSCsZn9VrFK6lhzrmoS",
+            "28a": "1fGX3yB23k2VoXHY8tssex1LaVIrl5DOv",
+            "27b": "1ycXYO86vkphxfL_wV_g-2crjr_xxuA7z",
+            "27a": "11LlFL-qqsY7yAef6FzsW59pXnYjGjkmF",
+            "26d": "1BetjPPd5dTpPwhPizUf0kuzwf6hLxF41",
+            "26e": "1a8kGwZRIARR3hLPCP_ixQNpN3e6B0Sq7",
+            "26b": "1_UMySaS8zrMKlGjD6jOSuDWO2fV_IJW5",
+            "26c": "1fv4b7xGtsr5IsPeyQjTJA-rmJoTvNWev",
+            "26a": "1iCp46R1NiMekiqnw5qa4PcA_oSGaqfw0",
+            "25b": "1BmawCJefnTOP1enPaoz4sU34l_bnpiHo",
+            "25c": "1kKD6XlH4cww3l_DJZR9aNaOjVh7iQ83K",
+            "25a": "12B7okPWvi0_qrm_a2q1lJbsnKNothUG0",
+            "24e": "1o4QuYhEO4XMl25gT8SFLFiqyT7gODRB1",
+            "24d": "1zJTNhQA__9LYB37RZYr-W85RNtUInU4x",
+            "24c": "1eLoZQf2HhwGCeEHR4GR9MhrNeilWFomg",
+            "24b": "1sRU2yC68Xbjcqt6foZajORFaI_pp5Uj8",
+            "24a": "1DrY50EbRkV7ftK1E0HAHg3WRHtGoPccr",
+            "23e": "1eoSGLOBBpGi355A-AXeqR6ekLSncjtEG",
+            "23d": "1pbt89j4Wh1icTZBUzIl5pIDvxhVlidAO",
+            "23b": "158bcd9V_dSlFoYtFkpN-BPkhwpDp0UvI",
+            "23a": "1iGyHiAFYAQ4zvwy3bk4EPp3VQnxnBDgv",
+            "23c": "1ycMKzga0krQcXleBnb4xf0tzd1bSDw7z",
+            "22b": "15NcSDx5UWHZJrzZGV2FHscOPZuSsLdq-",
+            "22c": "1Y_PgCOzo9KaFtpuGk52R9kLRZFa7dl9G",
+            "22a": "1Z4XhbfHtum5dr3o4k4ZDH4fSBIWrr1A7",
+            "21e": "1WD-um6wbOzCmCGSZvsTv99w21kuiLZIo",
+            "21f": "1kTGwmmrK5JIp88PY-x-jQH43pVB9aaAE",
+            "21d": "1liAQTrrM58AFv_W7rTgRRh2_1CzuyAoS",
+            "21b": "1GJV8rIC6CMOm560d-GtmXiaxDQ5K4R3D",
+            "21c": "1dQmFFRJxMGAve51DytJ8Sl5eYs-pXmES",
+            "21a": "1qDVHssHD6Jdp3r9OMAM6bzutzxwHdof0",
+            "20e": "136-t8ghE58Dvo-nC_BNn_YkQwdCkfH_I",
+            "20d": "1cocxxIY8s6FwEEcEi24xsx72nxGLuyci",
+            "20c": "1zYD2ptJJMmqiOh4D2fESPd5vMN67NwZw",
+            "19f": "1CU3QnhPEVr8TLmbI04hY3etFhZFDqUYx",
+            "20b": "1JTxzwVcmzWTZq58Jp6GAp44e3wq524Fr",
+            "20a": "1sOQWCyzZwoAP-FRifft6uLIuKpcD42iO",
+            "19d": "1DpcZCQAbFegxZae3esBFH-rMrzkDs8YW",
+            "19e": "1xZ33w6UDRnAslG672JGI0gFCqgGE1ToL",
+            "19b": "1L7czqZd3P8CVufdL4lKMl0-xpOaJNcJ-",
+            "19c": "1cu9Tiek6rIiAuhqhgrJGWjMTL8_Aie6k",
+            "18f": "1CzjtUB6NYxjPot_bv6flSi1m3Snaj_Wo",
+            "19a": "1PEN8QfevM-fiJBibixj4FVUQihMkBfm6",
+            "18d": "17Tk0g0URbakgf3tp_ld3qHg4DV7VxhCy",
+            "18e": "1PU8kTgNmcCNMv3zEvGu1KA-tH0x1dYue",
+            "18c": "1V3CZb4bTM4ECKhUVa2WdyHvkxPbT40Xs",
+            "18b": "1rA0kxasnhCv90lkRUmOabCNNme7khPq9",
+            "17f": "1_o7yhc2nG6ZoFWX0nN-K-MlDr37e7PPw",
+            "18a": "1q9fsYYC_UZvLdiOnDX3MLSKj6gdlmsXr",
+            "17d": "1KXaGrUx2rwkk5Wq8whPppuYoqlXkwcSw",
+            "17e": "1cNyi8NNQrUtOTq_V2qa_VuONEITNNicT",
+            "17b": "1KV0gtCr2AfjWIc1BcEVbwheqzUcHTjlR",
+            "17c": "1PTbnNP-apgpjdab3bjzarrEmn_6kPAfk",
+            "17a": "13hHKqE0wpJ9NlXlswmKwrwjU7-W6v2zm",
+            "16e": "16yCU5YVrx_xNzhfodBjVkinW79duZdI5",
+            "16d": "1IHO_nhOy8vus4TUa5tTluUe3WpscSJj2",
+            "16c": "1n1QjbcGCZoAyexSueIbQbLr6Q6XKLwbS",
+            "16b": "11GnK4Z-oGSk44-G7z7TsS6VGpB0kcxtn",
+            "16a": "1dSl9M2oIcRr9h_8reEeTS80a5_9Ji39X",
+            "15f": "18bqvtu2DYZPVe6Lb7r7lYNNS3yExK1f9",
+            "15e": "1HA0kOyq1Ps1hsGMMbPMyfT383UCRVQNv",
+            "15d": "1VK5YNFFGmNuQc8lU2d5AN335g3B2NF49",
+            "15b": "1GWaexrxOjh-nMCHCyuFj2y7sCYYOLbY6",
+            "15c": "1SK6-4526m8SEGaw-7KDWhMJX0Fkm63M0",
+            "14c": "1iYc0oddJoL8SfnOP5T2wyKTZXZSQqy-3",
+            "15a": "1kco6hKTc-2VLRhZafIKgOosC5BS33xcQ",
+            "14a": "14zKFsV9Vl2iuZabWIGdXCi_rZhzllGay",
+            "14b": "1oLdzUdYWzjVE-4Gle7BvCu7Bk5o6z6Kn",
+            "13e": "1XHNfs2avCTEqS5K-TDTX6cnHK2t3DLAl",
+            "13d": "1jzfCfW_T02u9z_YFyS2eIYKkcUqk-Mwk",
+            "13f": "1wjhm4GX7m7f7Xw08H0Z2CsI780WAPO26",
+            "13c": "1KtxXzpTo6yPDX-7Slm-VlaRFPHVVHTAR",
+            "13b": "1fvXL0eUXAQdt0i6pmI7A7D_ypEB8EFmA",
+            "12f": "10Hm3_RIsy2_kMblxdrki8nE_vCqBVag2",
+            "13a": "1wMYx2aLurhVxUj8XNz4yRFX-RqA94VpK",
+            "12e": "1LsfoZyK2XU8WL2x0zp7cNiBVt8OY4NBQ",
+            "12d": "1x-vERjMcedGoEj7RRwIaV6bzXMO2kVKX",
+            "12c": "1_M73UmZy1EE9c8aueDnxArLND6tvRT9W",
+            "12b": "19sc0eNJXrkvwtQhCLfcCZ9ECBi6TIjWB",
+            "12a": "1xHc0DqKBfMkzG8JQxhquul1mejcdPgcj",
+            "11f": "165-uUijYM7lk4RUU7lCXo-gX7lIk7QgV",
+            "11g": "1IKTb-ZBZlhloA3P2Xo46F134uHWiw6uH",
+            "11d": "1bPOR7wJlpbUtsDV-iZMGXuGXhnRs9uHV",
+            "11e": "1cpXVTRDsAiJb0puWdh5D7A-wk1T4zxNT",
+            "11c": "1gnFUE5y8rnmgKDyqfGfSbTH-vPkOb2ii",
+            "11b": "1-aoX1hXCQxnXie0ZlepYhULQakEK5wZU",
+            "11a": "1jAFfqE-0iA6eB0gcctkgDC6ckfDOmF5y",
+            "10e": "1PoYA85XKe9gH9tMW2ft7itWnz0lBtC8r",
+            "10g": "1lNIETXPOpFExnbkGV7TuUqP_XCtMB0Xm",
+            "10f": "1vl52j1lzeTWWmPptuQ3S1U0A9lzsEm-i",
+            "10c": "11rEAS8xDcbUypJL082IdswvIhitdfnJp",
+            "10d": "1BOamiLMzt_sjBu_bObqTok1TT2IqfKyp",
+            "10b": "1k_ZxSjqeWg-4Gx8INLf9yR--6fyHJkxH",
+            "9d": "1WUkHtFIu0GxXiaUVEuYwubvXW5wZzHVW",
+            "10a": "1ih-CWOv6rpbSYrPVQOhduyr9vs5B2Q2n",
+            "9b": "1GoaQwY0KojbpOKoC_IRzyvFvo_6kKGex",
+            "9c": "1wWCkg3QhVimcQdJHQEQSfCeF3NMYUc2y",
+            "9a": "1X4RNpO4rcf0fbpj1V7D21a_3f_D9VJAy",
+            "8c": "16S-zbRlTCKXpwEhEgYBBLvLsHIrZJcXU",
+            "8b": "19E4BIrzdSm4tkAF9rfhUjLd8-tWvYTrD",
+            "8a": "1qPBBQH8IVk7DG7_BI0qm7P8XH7hBcAtf",
+            "7d": "189hItEC4wkw69jVsTlfC-GkFgrGutG7Y",
+            "7e": "1UVZ_XBMHijGhx_lQJAW7iN3Wu03ayZxC",
+            "7c": "1RtrA2BO4IcnDHEgsfPL_NL8a_x6miiSR",
+            "7b": "1ZVw-cFS8035cHbhWLrBIT2TGrdE4pjfi",
+            "7a": "1_ePqSMj2JtypAZgKHkuHrgdUKZ5bsnQk",
+            "6e": "1KK6o3VnNElIXJM8T9bORi9uhDkbANQWy",
+            "6f": "1Uw4ku4WfJXivDg5VEa4cb1b_Lfqa1mKC",
+            "6g": "1V82vceLcmwjRD8E5tmhxg1Gf0Tn130VS",
+            "6d": "1SFrjSyOWbzZYuJI9_mai7wQQtBPhdWyK",
+            "6c": "1Z7_tkNIbViNyKWD1p9UuJEOrOmvNhSqU",
+            "6a": "1EcebRziRPljVpO_l_MlZOuHJ1otdax8x",
+            "6b": "1lcQqELWpNrQZCMhHJaadDLQqBzrFI4Vp",
+            "5": "1yJO-etB_9nIRlY1TN9IzCy6pB7YIR5Ac",
+            "4b": "12YuEJwiEeA6_6vrKX2CDPhlHsXAkTZvy",
+            "4c": "1523ZINBEuPK_hHj1p3Py-D0d6YHfIpcU",
+            "3e": "11wS7I8jpIZgNHCwSUwhcOGY08EE57jGj",
+            "4a": "1XTF54_dNy8yPmUyzWB-gfyaZcMPY44dE",
+            "3c": "1kcJPSJoykp7tENn99jY2TzNG3GXsDlV_",
+            "3d": "1l1wg84VlsW0Fa8sxbgdQGxgsI2bxswBg",
+            "3b": "1HMfGigQJjqXeY8YPJD1YUAYBAI_IEv40",
+            "3a": "1kJgLiRxMSvXSl702Q41q4repIIdtV-Jl",
+            "2e": "1LSVEL6FtftQqRiiG6D-1ad-aBhyDUmNR",
+            "2f": "1rszleGoOxzhaDSJKI7GovwHzJKPzHgYg",
+            "2d": "1513wWZdq2GJS_j67lqw6-eST_qEQDqYL",
+            "2c": "1OnZg-FtBl27lUyK7XUsJuFPEXSFw57_i",
+            "2b": "1nLi6VAeBu3mcrBGoAszBD9GAFtU1o_H_",
+            "2a": "1aM3As2Dk4nfG6SGO7gtYG9LDdLrxec5t",
+            "1-g": "182d8JZMmnD4GnavBkDN42UGkit7PEXNa",
+            "1-f": "1WLpY_qJ9iW4AVrQ8Sdz-0HpMFFie2qQL",
+            "1-e": "18kDZ9me50hLLGD8sxpVx2OBrTvlCFi8Q",
+            "1-d": "17iIFtkwpaez59S-a50uIsnyHadXcyqCa",
+            "1-c": "14D8vwSlHeySJYzV0L1maLFmxLwGb2e6z",
+            "1-b": "16aTSW87Hz9SnlEX9dbVYwtswfCqzif-S",
+            "1-a": "1dGrMFSKuIqby1drRzNyZuXgERfixlrCH",
+            // Agrega las demás manzanas aquí...
+        };
+
         // DATOS CON POLÍGONOS E ICONOS (POINTS)
         // Se actualizó la propiedad a "icon" para coincidir con tu JSON
         const GEOJSON_DATA = {
@@ -820,6 +1226,33 @@
             document.getElementById("panel-title").innerText = "Manzana " + name;
             document.getElementById("inventory-container").classList.add("hidden");
             
+            // MOSTRAR IMAGEN DE LA MANZANA
+            const imgContainer = document.getElementById("manzana-image-container");
+            const imgElement = document.getElementById("manzana-image");
+            if (imgContainer && imgElement) {
+                imgElement.style.display = ''; // Resetear por si se ocultó por error anteriormente
+                imgContainer.style.display = ''; 
+                imgContainer.classList.remove("hidden");
+                
+                // Lógica para cargar desde Drive o Local
+                if (DRIVE_IMAGE_IDS[name]) {
+                    imgElement.src = `https://lh3.googleusercontent.com/d/${DRIVE_IMAGE_IDS[name]}`;
+                } else {
+                    imgElement.src = `images/manzanas/${name}.png`; 
+                }
+            }
+            
+            // CONFIGURAR BOTÓN COMPARTIR
+            const shareContainer = document.getElementById("share-container");
+            const shareBtn = document.getElementById("btn-share-manzana");
+            if (shareContainer && shareBtn) {
+                shareContainer.classList.remove("hidden");
+                const assignment = globalSheetData.find(item => item.manzana.toString().trim() === name.toString().trim());
+                // Si está asignado usamos el nombre, si no "Disponible"
+                const publisherName = (status === "Asignado" && assignment) ? assignment.publicador : "Disponible";
+                shareBtn.onclick = () => shareAssignment(name, publisherName);
+            }
+            
             if (status === "Asignado") {
                 const assignment = globalSheetData.find(item => item.manzana.toString().trim() === name.toString().trim());
                 document.getElementById("options-container").classList.add("hidden");
@@ -843,6 +1276,15 @@
             
             document.getElementById("panel-title").innerText = "Listado de Asignadas";
             document.getElementById("options-container").classList.add("hidden");
+            
+            // OCULTAR IMAGEN EN EL LISTADO
+            const imgContainer = document.getElementById("manzana-image-container");
+            if (imgContainer) imgContainer.classList.add("hidden");
+            
+            // OCULTAR BOTÓN COMPARTIR
+            const shareContainer = document.getElementById("share-container");
+            if (shareContainer) shareContainer.classList.add("hidden");
+
             document.getElementById("completion-container").classList.add("hidden");
             document.getElementById("inventory-container").classList.remove("hidden");
             
@@ -975,6 +1417,44 @@
         }
 
         window.onload = initMap;
+        // Función para ampliar imagen
+        function openZoom(url) {
+            const modal = document.getElementById('imageModal');
+            const fullImg = document.getElementById('imgFull');
+            fullImg.src = url;
+            modal.style.display = 'block';
+        }
+
+        // Función para compartir mediante API nativa
+        async function shareAssignment(name, publisher) {
+            let text = `Manzana ${name}`;
+            if (publisher && publisher !== "Disponible") {
+                text += ` asignada a ${publisher}.`;
+            } else {
+                text += ` está disponible.`;
+            }
+            const shareData = {
+                title: `Manzana ${name}`,
+                text: text,
+                url: window.location.href
+            };
+
+            try {
+                if (navigator.share) {
+                    await navigator.share(shareData);
+                } else {
+                    // Fallback: Copiar al portapapeles
+                    navigator.clipboard.writeText(`${shareData.text} - ${shareData.url}`);
+                    showToast("Enlace copiado al portapapeles", false);
+                }
+            } catch (err) {
+                console.error("Error al compartir:", err);
+            }
+        }
     </script>
+
+    <div id="imageModal" onclick="this.style.display='none'">
+        <img id="imgFull" src="" alt="Mapa ampliado">
+    </div>
 </body>
 </html>
